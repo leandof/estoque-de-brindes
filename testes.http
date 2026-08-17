@@ -1,0 +1,13 @@
+### 1. Teste de Busca (GET)
+GET http://localhost:8080/itens
+
+### 2. Teste de Cadastro (POST)
+POST http://localhost:8080/itens
+Content-Type: application/json
+
+{
+  "codigo": "CANECA-01",
+  "nome": "Caneca de Cerâmica Preta Truckvan",
+  "quantidade": 30,
+  "valor": 25.50
+}

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truckvan - Controle de Estoque</title>
+
+    <!-- Ícone que aparece na aba do navegador (Favicon) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23b32025'/><text x='50' y='75' font-size='75' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'>T</text></svg>">
+
+    <style>
+        /* --- IDENTIDADE VISUAL TRUCKVAN --- */
+        :root {
+            --vermelho-truckvan: #b32025;
+            --vermelho-escuro: #8a171c;
+            --cinza-fundo: #f4f4f9;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--cinza-fundo); margin: 0; }
+
+        /* Cabeçalho Atualizado com a Logo T */
+        .header {
+            background-color: var(--vermelho-truckvan);
+            color: white;
+            padding: 20px;
+            border-bottom: 5px solid var(--vermelho-escuro);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        .logo-t {
+            background-color: white;
+            color: var(--vermelho-truckvan);
+            font-size: 50px;
+            font-weight: 900;
+            width: 75px;
+            height: 75px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-family: 'Arial Black', sans-serif;
+        }
+        .header-text { text-align: left; }
+        .header h1 { margin: 0; font-size: 2.5em; letter-spacing: 2px; font-weight: 900; line-height: 1; }
+        .header p { margin: 5px 0 0 0; font-size: 1.1em; opacity: 0.9; }
+
+        .container { max-width: 1100px; margin: 30px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+
+        /* Cards Financeiros */
+        .dashboard { display: flex; gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--vermelho-truckvan); color: white; padding: 20px; border-radius: 8px; flex: 1; text-align: center; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        .card h3 { margin: 0; font-size: 1.1em; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
+        .card p { margin: 10px 0 0; font-size: 2.5em; font-weight: bold; }
+
+        /* Painel de Ações */
+        .painel-acoes { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--vermelho-truckvan); }
+        .painel-acoes h3 { margin-top: 0; color: #333; }
+        .form-group { display: inline-block; margin-right: 15px; margin-bottom: 10px; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        button { background-color: var(--vermelho-truckvan); color: white; border: none; padding: 10px 20px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: var(--vermelho-escuro); }
+        .btn-remover { background-color: #dc3545; padding: 6px 12px; font-size: 12px; margin-left: 10px; }
+        .btn-remover:hover { background-color: #a71d2a; }
+
+        /* Tabela */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 15px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background-color: #333; color: white; font-weight: 600; text-transform: uppercase; font-size: 13px; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+        .estoque-baixo { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo-t">T</div>
+    <div class="header-text">
+        <h1>TRUCKVAN</h1>
+        <p>Sistema de Controle de Estoque</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- RELATÓRIO FINANCEIRO -->
+    <div class="dashboard">
+        <div class="card">
+            <h3>Total de Itens</h3>
+            <p id="total-brindes">-</p>
+        </div>
+        <div class="card">
+            <h3>Patrimônio Armazenado</h3>
+            <p id="valor-total">-</p>
+        </div>
+    </div>
+
+    <!-- CADASTROS E MOVIMENTAÇÕES -->
+    <div class="painel-acoes">
+        <h3>Gerenciar Estoque</h3>
+
+        <!-- Form Novo Item -->
+        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #ddd;">
+            <strong>Novo Brinde:</strong>
+            <input type="text" id="novo-codigo" placeholder="Código (Ex: CAN-01)">
+            <input type="text" id="novo-nome" placeholder="Nome do Brinde">
+            <input type="number" id="novo-qtd" placeholder="Qtd Inicial" style="width: 100px;">
+            <input type="number" id="novo-valor" placeholder="Valor Un (R$)" style="width: 110px;" step="0.01">
+            <button onclick="cadastrarItem()">Cadastrar Produto</button>
+        </div>
+
+        <!-- Form Movimentação -->
+        <div>
+            <strong>Movimentar:</strong>
+            <select id="mov-id-item">
+                <option value="">Selecione o Brinde...</option>
+            </select>
+            <select id="mov-tipo">
+                <option value="ENTRADA">Entrada (Adicionar)</option>
+                <option value="SAIDA">Saída (Retirar)</option>
+            </select>
+            <input type="number" id="mov-qtd" placeholder="Quantidade" style="width: 120px;">
+            <button onclick="registrarMovimentacao()">Confirmar Movimentação</button>
+        </div>
+    </div>
+
+    <!-- TABELA DE ITENS -->
+    <h2>Inventário Atual</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Código</th>
+            <th>Nome do Brinde</th>
+            <th>Em Estoque</th>
+            <th>Valor Unitário</th>
+            <th>Ações</th>
+        </tr>
+        </thead>
+        <tbody id="tabela-itens">
+        <tr><td colspan="5" style="text-align:center;">Carregando dados da rede...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const API_URL = '';
+
+    function carregarDados() {
+        carregarRelatorio();
+        carregarItens();
+    }
+
+    function carregarRelatorio() {
+        fetch(`${API_URL}/itens/relatorio`)
+            .then(res => res.json())
+            .then(dados => {
+                document.getElementById('total-brindes').innerText = dados.totalDeBrindesCadastrados;
+                document.getElementById('valor-total').innerText = dados.valorTotalArmazenado;
+            });
+    }
+
+    function carregarItens() {
+        fetch(`${API_URL}/itens`)
+            .then(res => res.json())
+            .then(itens => {
+                const corpoTabela = document.getElementById('tabela-itens');
+                const selectMov = document.getElementById('mov-id-item');
+
+                corpoTabela.innerHTML = '';
+                selectMov.innerHTML = '<option value="">Selecione o Brinde...</option>';
+
+                itens.forEach(item => {
+                    let classeEstoque = item.quantidade < 20 ? 'estoque-baixo' : '';
+
+                    corpoTabela.innerHTML += `
+                            <tr>
+                                <td><strong>${item.codigo}</strong></td>
+                                <td>${item.nome}</td>
+                                <td class="${classeEstoque}">${item.quantidade} un.</td>
+                                <td>R$ ${item.valor.toFixed(2).replace('.', ',')}</td>
+                                <td>
+                                    <button class="btn-remover" onclick="removerItem(${item.id})">Remover</button>
+                                </td>
+                            </tr>
+                        `;
+
+                    selectMov.innerHTML += `<option value="${item.id}">${item.codigo} - ${item.nome} (Estoque: ${item.quantidade})</option>`;
+                });
+            });
+    }
+
+    function cadastrarItem() {
+        const codigo = document.getElementById('novo-codigo').value;
+        const nome = document.getElementById('novo-nome').value;
+        const quantidade = document.getElementById('novo-qtd').value;
+        const valor = document.getElementById('novo-valor').value;
+
+        if(!codigo || !nome || !quantidade || !valor) {
+            alert("Preencha todos os campos do novo brinde!"); return;
+        }
+
+        fetch(`${API_URL}/itens`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo, nome, quantidade, valor })
+        }).then(res => {
+            if(res.ok) {
+                alert("Produto cadastrado com sucesso!");
+                document.getElementById('novo-codigo').value = '';
+                document.getElementById('novo-nome').value = '';
+                document.getElementById('novo-qtd').value = '';
+                document.getElementById('novo-valor').value = '';
+                carregarDados();
+            } else { alert("Erro ao cadastrar. Verifique se o código já existe."); }
+        });
+    }
+
+    function registrarMovimentacao() {
+        const idItem = document.getElementById('mov-id-item').value;
+        const tipo = document.getElementById('mov-tipo').value;
+        const quantidade = document.getElementById('mov-qtd').value;
+
+        if(!idItem || !quantidade) {
+            alert("Selecione um brinde e digite a quantidade!"); return;
+        }
+
+        fetch(`${API_URL}/movimentacoes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item: { id: idItem }, tipo: tipo, quantidade: quantidade })
+        }).then(async res => {
+            if(res.ok) {
+                alert("Movimentação registrada com sucesso!");
+                document.getElementById('mov-qtd').value = '';
+                carregarDados();
+            } else {
+                const msgErro = await res.text();
+                alert("ERRO: " + msgErro);
+            }
+        });
+    }
+
+    function removerItem(id) {
+        if(confirm("Tem certeza que deseja apagar este brinde do sistema?")) {
+            fetch(`${API_URL}/itens/${id}`, { method: 'DELETE' })
+                .then(res => {
+                    if(res.ok) { carregarDados(); }
+                    else { alert("Não é possível apagar um item que já possui movimentações no histórico."); }
+                });
+        }
+    }
+
+    carregarDados();
+</script>
+</body>
+</html>
