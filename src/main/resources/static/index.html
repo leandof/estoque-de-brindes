@@ -156,8 +156,9 @@
         fetch(`${API_URL}/itens/relatorio`)
             .then(res => res.json())
             .then(dados => {
-                document.getElementById('total-brindes').innerText = dados.totalDeBrindesCadastrados;
-                document.getElementById('valor-total').innerText = dados.valorTotalArmazenado;
+
+                document.getElementById("total-brindes").innerText = dados.totalDeBrindesCadastrados;
+                document.getElementById( "valor-total" ).innerText = dados.valorTotalArmazenado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             });
     }
 
@@ -175,16 +176,19 @@
                     let classeEstoque = item.quantidade < 20 ? 'estoque-baixo' : '';
 
                     corpoTabela.innerHTML += `
-                            <tr>
-                                <td><strong>${item.codigo}</strong></td>
-                                <td>${item.nome}</td>
-                                <td class="${classeEstoque}">${item.quantidade} un.</td>
-                                <td>R$ ${item.valor.toFixed(2).replace('.', ',')}</td>
-                                <td>
-                                    <button class="btn-remover" onclick="removerItem(${item.id})">Remover</button>
-                                </td>
-                            </tr>
-                        `;
+    <tr>
+        <td><strong>${item.codigo}</strong></td>
+        <td>${item.nome}</td>
+        <td class="${classeEstoque}">${item.quantidade} un.</td>
+        <td>${item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        <td>
+            <button onclick="editarValor(${item.id}, ${item.valor})" style="background-color: #f0ad4e; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-right: 5px;">Editar</button>
+            <button onclick="removerItem(${item.id})" style="background-color: #d9534f; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px;">Remover</button>
+        </td>
+             </tr>
+
+
+            </tr>  `;
 
                     selectMov.innerHTML += `<option value="${item.id}">${item.codigo} - ${item.nome} (Estoque: ${item.quantidade})</option>`;
                 });
@@ -249,6 +253,33 @@
                     if(res.ok) { carregarDados(); }
                     else { alert("Não é possível apagar um item que já possui movimentações no histórico."); }
                 });
+        }
+    }
+
+
+    function editarValor(id, valorAtual) {
+        // Abre uma caixinha nativa do navegador pedindo o novo valor
+        let novoValorStr = prompt("Digite o novo valor unitário (ex: 25.50):", valorAtual);
+
+        // Se o usuário digitou algo e não cancelou
+        if (novoValorStr !== null && novoValorStr.trim() !== "") {
+            // Troca vírgula por ponto para o Java entender e converte para decimal
+            let novoValor = parseFloat(novoValorStr.replace(',', '.'));
+
+            fetch(`/itens/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ valor: novoValor })
+            }).then(response => {
+                if (response.ok) {
+                    alert("Valor atualizado com sucesso!");
+                    carregarItens(); // Recarrega a tabela para mostrar o novo valor
+                } else {
+                    alert("Erro ao atualizar o valor.");
+                }
+            });
         }
     }
 
