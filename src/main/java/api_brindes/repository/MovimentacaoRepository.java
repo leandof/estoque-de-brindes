@@ -2,14 +2,17 @@ package api_brindes.repository;
 
 import api_brindes.model.Movimentacao;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.List; // Não esqueça dessa importação para a Lista!
 
-@Repository
-public interface MovimentacaoRepository extends JpaRepository<Movimentacao, Integer> {
+public interface MovimentacaoRepository extends JpaRepository<Movimentacao, Long> {
 
-    // O Spring gera o SQL automático para buscar todo o histórico de um item específico!
-    List<Movimentacao> findByItemIdOrderByDataMovimentacaoDesc(Integer idItem);
+    // O método novo que criamos para limpar os filhos antes de apagar o pai
+    @Transactional
+    void deleteAllByItemId(Integer itemId);
+
+    // O método que já existia para listar o histórico e tinha sumido (agora usando Integer!)
+    List<Movimentacao> findByItemIdOrderByDataMovimentacaoDesc(Integer itemId);
 
 }

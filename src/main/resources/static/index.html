@@ -65,6 +65,7 @@
         .btn-remover { background-color: #dc3545; padding: 6px 12px; font-size: 12px; margin-left: 10px; }
         .btn-remover:hover { background-color: #a71d2a; }
 
+
         /* Tabela */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 15px; border-bottom: 1px solid #ddd; text-align: left; }
@@ -75,6 +76,7 @@
     </style>
 </head>
 <body>
+
 
 <div class="header">
     <div class="logo-t">T</div>
@@ -142,7 +144,16 @@
         <tr><td colspan="5" style="text-align:center;">Carregando dados da rede...</td></tr>
         </tbody>
     </table>
+    <!-- RODAPÉ DINÂMICO -->
+    <div style="text-align: center; margin-top: 40px; padding: 20px; color: #666;">
+        <hr style="border: 0; border-top: 1px solid #ddd; margin-bottom: 20px;">
+        <p style="font-size: 14px;">Controle de Estoque - Truckvan</p>
+        <div id="area-autenticacao">
+            <!-- O JavaScript vai injetar o botão de Login ou Logout aqui dentro -->
+        </div>
+    </div>
 </div>
+
 
 <script>
     const API_URL = '';
@@ -205,9 +216,16 @@
             alert("Preencha todos os campos do novo brinde!"); return;
         }
 
+        // Pega o crachá do bolso
+        const token = localStorage.getItem('meu_token_jwt');
+
         fetch(`${API_URL}/itens`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                // Mostra o crachá!
+                'Authorization': 'Bearer ' + token
+            },
             body: JSON.stringify({ codigo, nome, quantidade, valor })
         }).then(res => {
             if(res.ok) {
@@ -217,7 +235,11 @@
                 document.getElementById('novo-qtd').value = '';
                 document.getElementById('novo-valor').value = '';
                 carregarDados();
-            } else { alert("Erro ao cadastrar. Verifique se o código já existe."); }
+            } else if (res.status === 403) {
+                alert("ACESSO NEGADO! Você precisa fazer Login primeiro.");
+            } else {
+                alert("Erro ao cadastrar. Verifique se o código já existe.");
+            }
         });
     }
 
@@ -230,15 +252,24 @@
             alert("Selecione um brinde e digite a quantidade!"); return;
         }
 
+        // Pega o crachá do bolso
+        const token = localStorage.getItem('meu_token_jwt');
+
         fetch(`${API_URL}/movimentacoes`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                // Mostra o crachá!
+                'Authorization': 'Bearer ' + token
+            },
             body: JSON.stringify({ item: { id: idItem }, tipo: tipo, quantidade: quantidade })
         }).then(async res => {
             if(res.ok) {
                 alert("Movimentação registrada com sucesso!");
                 document.getElementById('mov-qtd').value = '';
                 carregarDados();
+            } else if (res.status === 403) {
+                alert("ACESSO NEGADO! Você precisa fazer Login primeiro.");
             } else {
                 const msgErro = await res.text();
                 alert("ERRO: " + msgErro);
@@ -248,42 +279,81 @@
 
     function removerItem(id) {
         if(confirm("Tem certeza que deseja apagar este brinde do sistema?")) {
-            fetch(`${API_URL}/itens/${id}`, { method: 'DELETE' })
+            // Pega o crachá do bolso
+            const token = localStorage.getItem('meu_token_jwt');
+
+            fetch(`${API_URL}/itens/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    // Mostra o crachá!
+                    'Authorization': 'Bearer ' + token
+                }
+            })
                 .then(res => {
-                    if(res.ok) { carregarDados(); }
-                    else { alert("Não é possível apagar um item que já possui movimentações no histórico."); }
+                    if(res.ok) {
+                        carregarDados();
+                    } else if (res.status === 403) {
+                        alert("ACESSO NEGADO! Você precisa fazer Login primeiro.");
+                    } else {
+                        alert("Não é possível apagar um item que já possui movimentações no histórico.");
+                    }
                 });
         }
     }
 
 
     function editarValor(id, valorAtual) {
-        // Abre uma caixinha nativa do navegador pedindo o novo valor
         let novoValorStr = prompt("Digite o novo valor unitário (ex: 25.50):", valorAtual);
 
-        // Se o usuário digitou algo e não cancelou
         if (novoValorStr !== null && novoValorStr.trim() !== "") {
-            // Troca vírgula por ponto para o Java entender e converte para decimal
             let novoValor = parseFloat(novoValorStr.replace(',', '.'));
+
+            // Pega o crachá do bolso
+            const token = localStorage.getItem('meu_token_jwt');
 
             fetch(`/itens/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    // Mostra o crachá!
+                    'Authorization': 'Bearer ' + token
                 },
                 body: JSON.stringify({ valor: novoValor })
             }).then(response => {
                 if (response.ok) {
                     alert("Valor atualizado com sucesso!");
-                    carregarItens(); // Recarrega a tabela para mostrar o novo valor
+                    carregarItens();
+                } else if (response.status === 403) {
+                    alert("ACESSO NEGADO! Você precisa fazer Login primeiro.");
                 } else {
                     alert("Erro ao atualizar o valor.");
                 }
             });
         }
     }
-
     carregarDados();
+    // --- FUNÇÕES DE RODAPÉ E LOGOUT ---
+    function atualizarRodape() {
+        const token = localStorage.getItem('meu_token_jwt');
+        const area = document.getElementById('area-autenticacao');
+
+        if (token) {
+            // Se tem token, mostra o botão de SAIR
+            area.innerHTML = '<button onclick="fazerLogout()" style="background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px;">Desconectar (Sair)</button>';
+        } else {
+            // Se NÃO tem token, mostra o botão de IR PARA O LOGIN
+            area.innerHTML = '<button onclick="window.location.href=\'/login.html\'" style="background-color: #333; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px;">Acesso Gerencial (Login)</button>';
+        }
+    }
+
+    function fazerLogout() {
+        localStorage.removeItem('meu_token_jwt');
+        location.reload(); // Recarrega a página para atualizar o botão
+    }
+
+    // Chama a função toda vez que a página carrega
+    atualizarRodape();
+
 </script>
 </body>
 </html>

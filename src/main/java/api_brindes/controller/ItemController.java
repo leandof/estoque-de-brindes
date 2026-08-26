@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import api_brindes.repository.MovimentacaoRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.HashMap;
@@ -16,7 +18,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/itens")
 public class ItemController {
-
+    @Autowired
+    private MovimentacaoRepository movimentacaoRepository;
     @Autowired
     private ItemRepository itemRepository;
 
@@ -51,16 +54,19 @@ public class ItemController {
 
         return ResponseEntity.ok(relatorio);
     }
+
     // 5. REMOVER ITEM
     // Acessado via: DELETE http://localhost:8080/itens/1
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> remover(@PathVariable Integer id) {
-        if (itemRepository.existsById(id)) {
-            itemRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
+    @Transactional
+    public ResponseEntity apagar(@PathVariable Integer id) { // <-- Troque Long por Integer AQUI
+
+        movimentacaoRepository.deleteAllByItemId(id);
+        itemRepository.deleteById(id);
+
+        return ResponseEntity.noContent().build();
     }
+
     @PutMapping("/{id}")
     public ResponseEntity<Item> atualizarValor(@PathVariable Integer id, @RequestBody Item itemAtualizado) {
         // Trocamos Long por Integer e colocamos itemRepository
