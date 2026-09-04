@@ -25,26 +25,31 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        // 1. Pega o token do cabeçalho
         var tokenJWT = recuperarToken(request);
 
-        // 2. Se tiver um token, nós validamos
         if (tokenJWT != null) {
-            var login = tokenService.getSubject(tokenJWT);
-            var usuario = repository.findByLogin(login);
+            try {
+                // Tenta ler o crachá
+                var login = tokenService.getSubject(tokenJWT);
+                var usuario = repository.findByLogin(login);
 
-            // 3. Força a autenticação no Spring (Avisa o porteiro que a pessoa tá liberada)
-            var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (usuario != null) {
+                    var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            } catch (RuntimeException e) {
+                // Se o crachá for inválido ou velho, ele cai aqui sem quebrar o servidor!
+                // O Spring vai simplesmente barrar o acesso (Erro 403) de forma segura.
+            }
         }
 
-        // 4. Manda a requisição seguir o fluxo normal
         filterChain.doFilter(request, response);
     }
 
     private String recuperarToken(HttpServletRequest request) {
         var authorizationHeader = request.getHeader("Authorization");
-        if (authorizationHeader != null) {
+        // Trava de segurança extra
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ") && !authorizationHeader.equals("Bearer null")) {
             return authorizationHeader.replace("Bearer ", "");
         }
         return null;

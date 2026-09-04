@@ -13,8 +13,8 @@ import java.time.ZoneOffset;
 @Service
 public class TokenService {
 
-    // Essa é a "assinatura" do seu porteiro. Em um projeto real, escondemos isso no application.properties
-    private String secret = "minha_senha_super_secreta_123";
+
+    private String secret = System.getenv("JWT_SECRET");
 
     // Método que FABRICA o crachá
     public String gerarToken(String login) {

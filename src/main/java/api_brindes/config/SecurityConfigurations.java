@@ -1,6 +1,5 @@
 package api_brindes.config;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +18,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfigurations {
 
-
     @Autowired
     private SecurityFilter securityFilter;
 
@@ -28,11 +26,10 @@ public class SecurityConfigurations {
         return http.csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(req -> {
-                    req.requestMatchers(HttpMethod.GET, "/**").permitAll();
-                    req.requestMatchers("/login").permitAll();
+                    req.requestMatchers(HttpMethod.POST, "/login").permitAll();
+                    req.requestMatchers(HttpMethod.GET, "/", "/login.html", "/index.html").permitAll();
                     req.anyRequest().authenticated();
                 })
-                // 2. A linha mágica que avisa o porteiro para usar o leitor de crachá
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
