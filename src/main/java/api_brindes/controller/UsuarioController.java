@@ -1,6 +1,8 @@
 package api_brindes.controller;
 
 import api_brindes.model.Usuario;
+import api_brindes.dto.CadastrarUsuarioDTO;
+import jakarta.validation.Valid;
 import api_brindes.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +23,8 @@ public class UsuarioController {
     private PasswordEncoder passwordEncoder; // Puxa o nosso criptografador BCrypt
 
     @PostMapping("/registrar")
-    public ResponseEntity registrar(@RequestBody Usuario novoUsuario) {
+    public ResponseEntity<?> registrar(@RequestBody @Valid CadastrarUsuarioDTO dados) {
+        Usuario novoUsuario = new Usuario(dados.login().trim(), dados.senha());
 
         // 1. Verifica se o login já existe no banco para não dar conflito
         if (repository.findByLogin(novoUsuario.getLogin()) != null) {

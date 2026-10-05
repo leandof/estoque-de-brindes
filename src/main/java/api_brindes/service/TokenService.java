@@ -1,51 +1,88 @@
 package api_brindes.service;
 
+import api_brindes.model.Usuario;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class TokenService {
 
+    /*
+     * A chave não é mais buscada diretamente em:
+     *
+     * ${JWT_SECRET}
+     *
+     * Agora ela vem do application.properties.
+     */
+    @Value("${api.security.token.secret}")
+    private String secret;
 
-    private String secret = System.getenv("JWT_SECRET");
+    private static final String ISSUER = "api-brindes";
 
-    // Método que FABRICA o crachá
-    public String gerarToken(String login) {
+
+    /**
+     * Gera um token JWT para o usuário autenticado.
+     */
+    public String gerarToken(Usuario usuario) {
+
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
+
+            Algorithm algoritmo = Algorithm.HMAC256(secret);
+
             return JWT.create()
-                    .withIssuer("API Estoque Brindes")
-                    .withSubject(login)
-                    .withExpiresAt(dataExpiracao())
-                    .sign(algorithm);
+                    .withIssuer(ISSUER)
+                    .withSubject(usuario.getLogin())
+                    .withIssuedAt(Instant.now())
+                    .withExpiresAt(gerarDataExpiracao())
+                    .sign(algoritmo);
+
         } catch (JWTCreationException exception) {
-            throw new RuntimeException("Erro ao gerar token jwt", exception);
+
+            throw new RuntimeException(
+                    "Erro ao gerar token JWT.",
+                    exception
+            );
         }
     }
 
-    // Método que LÊ e VALIDA o crachá na porta de entrada
-    public String getSubject(String tokenJWT) {
+
+    /**
+     * Lê o token e devolve o login do usuário.
+     *
+     * O login foi salvo no Subject quando o token foi criado.
+     */
+    public String getSubject(String token) {
+
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.require(algorithm)
-                    .withIssuer("API Estoque Brindes")
+
+            Algorithm algoritmo = Algorithm.HMAC256(secret);
+
+            return JWT.require(algoritmo)
+                    .withIssuer(ISSUER)
                     .build()
-                    .verify(tokenJWT)
+                    .verify(token)
                     .getSubject();
+
         } catch (JWTVerificationException exception) {
-            throw new RuntimeException("Token JWT inválido ou expirado!");
+
+            return null;
         }
     }
 
-    // O crachá vale por 2 horas, depois o usuário precisa logar de novo
-    private Instant dataExpiracao() {
-        return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));
+
+    /**
+     * Token válido por 2 horas.
+     */
+    private Instant gerarDataExpiracao() {
+
+        return Instant.now()
+                .plus(2, ChronoUnit.HOURS);
     }
 }

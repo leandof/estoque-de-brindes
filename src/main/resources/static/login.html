@@ -47,6 +47,7 @@
 
             if (response.ok) {
                 const dados = await response.json();
+                localStorage.removeItem('token');
                 localStorage.setItem('meu_token_jwt', dados.token);
                 // Mágica: Se logar certo, manda o usuário de volta pra tela principal!
                 window.location.href = '/';

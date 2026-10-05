@@ -35,6 +35,24 @@
         tr:nth-child(even) { background-color: #f9f9f9; }
         tr:hover { background-color: #f1f1f1; }
         .estoque-baixo { color: #dc3545; font-weight: bold; }
+        .abas { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+        .abas button[aria-pressed="false"] { background:#666; }
+        .filtros { display:flex; flex-wrap:wrap; gap:12px; align-items:end; }
+        .filtros label { display:flex; flex-direction:column; gap:6px; font-size:14px; }
+        .tabela-responsiva { overflow-x:auto; }
+        .tipo-entrada { color:#176b39; font-weight:bold; }
+        .tipo-saida { color:#b32025; font-weight:bold; }
+        .paginacao { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:15px; }
+        button:disabled { opacity:.5; cursor:not-allowed; }
+        .erro { color:#b32025; }
+        [hidden] { display:none !important; }
+        @media(max-width:700px) {
+            .container { margin:12px; padding:15px; }
+            .dashboard { flex-direction:column; }
+            .header h1 { font-size:1.7em; }
+            .painel-acoes input, .painel-acoes select { max-width:100%; box-sizing:border-box; margin:4px 0; }
+            .filtros label, .filtros input, .filtros select { width:100%; box-sizing:border-box; }
+        }
     </style>
 </head>
 <body>
@@ -48,6 +66,11 @@
 </div>
 
 <div class="container">
+    <nav class="abas" aria-label="Seções do sistema">
+        <button id="aba-estoque" aria-pressed="true" onclick="abrirAba('estoque')">Estoque</button>
+        <button id="aba-relatorio" aria-pressed="false" onclick="abrirAba('relatorio')">Relatório de Movimentações</button>
+    </nav>
+    <section id="painel-estoque" aria-label="Estoque">
     <div class="dashboard">
         <div class="card">
             <h3>Total de Itens</h3>
@@ -79,12 +102,13 @@
                 <option value="SAIDA">Saída (Retirar)</option>
             </select>
             <input type="number" id="mov-qtd" placeholder="Quantidade" style="width: 120px;">
+            <input type="text" id="mov-observacao" maxlength="500" placeholder="Observação (opcional)" aria-label="Observação da movimentação">
             <button onclick="registrarMovimentacao()">Confirmar Movimentação</button>
         </div>
     </div>
 
     <h2>Inventário Atual</h2>
-    <table>
+    <div class="tabela-responsiva"><table>
         <thead>
         <tr>
             <th>Código</th>
@@ -97,7 +121,37 @@
         <tbody id="tabela-itens">
         <tr><td colspan="5" style="text-align:center;">Verificando credenciais...</td></tr>
         </tbody>
-    </table>
+    </table></div>
+    </section>
+
+    <section id="painel-relatorio" aria-labelledby="titulo-relatorio" hidden>
+        <h2 id="titulo-relatorio">Relatório de Movimentações</h2>
+        <p>Novos registros usam o horário de Brasília. O responsável é identificado pelo login.</p>
+        <form id="form-filtros" class="painel-acoes filtros">
+            <label>Data inicial<input type="date" id="filtro-inicio"></label>
+            <label>Data final<input type="date" id="filtro-fim"></label>
+            <label>Responsável<select id="filtro-responsavel"><option value="">Todos</option></select></label>
+            <label>Tipo<select id="filtro-tipo"><option value="">Todos</option><option value="ENTRADA">ENTRADA</option><option value="SAIDA">SAÍDA</option></select></label>
+            <label>Produto/item<select id="filtro-item"><option value="">Todos</option></select></label>
+            <button type="submit">Filtrar</button>
+            <button type="button" onclick="limparFiltros()">Limpar filtros</button>
+        </form>
+        <p id="status-relatorio" role="status" aria-live="polite"></p>
+        <p style="font-size:13px; color:#666;">Role a tabela para o lado para consultar todas as colunas.</p>
+        <div class="tabela-responsiva">
+            <table aria-label="Movimentações de estoque">
+                <thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Tipo</th><th>Produto/item</th><th>Quantidade</th><th>Responsável / login</th><th>Observação</th><th>Estoque anterior</th><th>Estoque posterior</th></tr></thead>
+                <tbody id="tabela-movimentacoes"></tbody>
+            </table>
+        </div>
+        <div class="paginacao">
+            <button id="pagina-anterior" onclick="consultarRelatorio(paginaRelatorio - 1)" disabled>Anterior</button>
+            <span id="pagina-info"></span>
+            <button id="pagina-proxima" onclick="consultarRelatorio(paginaRelatorio + 1)" disabled>Próxima</button>
+        </div>
+        <p>Registros antigos podem não conter responsável ou saldos. Esses valores não são estimados.</p>
+        <button disabled title="Evolução futura: PDF e Excel/CSV">Exportar relatório (em breve)</button>
+    </section>
 
     <div style="text-align: center; margin-top: 40px; padding: 20px; color: #666;">
         <hr style="border: 0; border-top: 1px solid #ddd; margin-bottom: 20px;">
@@ -106,179 +160,214 @@
     </div>
 </div>
 
+
 <script>
-    // Recupera o token de forma segura
-    function obterToken() {
-        return localStorage.getItem('token') || localStorage.getItem('meu_token_jwt');
-    }
+    let paginaRelatorio = 0;
+    let filtrosAplicados = new URLSearchParams();
+    let consultaAtual = 0;
+    let operacaoEmAndamento = false;
+    const el = id => document.getElementById(id);
+    const moeda = valor => Number(valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 
-    function carregarDados() {
+    function obterToken() { return localStorage.getItem('meu_token_jwt') || localStorage.getItem('token'); }
+
+    async function api(url, opcoes = {}) {
         const token = obterToken();
-        const corpoTabela = document.getElementById('tabela-itens');
-
-        if (!token) {
-            corpoTabela.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red; font-weight:bold;">Acesso Negado. Clique em Login no rodapé para acessar o sistema.</td></tr>';
-            return;
-        }
-
-        // Carrega Relatório
-        fetch('/itens/relatorio', {
-            method: 'GET',
-            headers: { 'Authorization': 'Bearer ' + token }
-        }).then(res => {
-            if (!res.ok) throw new Error();
-            return res.json();
-        }).then(dados => {
-            document.getElementById("total-brindes").innerText = dados.totalDeBrindesCadastrados;
-            document.getElementById("valor-total").innerText = dados.valorTotalArmazenado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        }).catch(err => {
-            document.getElementById("total-brindes").innerText = "ERRO";
-            document.getElementById("valor-total").innerText = "ERRO";
-        });
-
-        // Carrega Tabela
-        fetch('/itens', {
-            method: 'GET',
-            headers: { 'Authorization': 'Bearer ' + token }
-        }).then(res => {
-            if (!res.ok) throw new Error();
-            return res.json();
-        }).then(itens => {
-            const selectMov = document.getElementById('mov-id-item');
-            corpoTabela.innerHTML = '';
-            selectMov.innerHTML = '<option value="">Selecione o Brinde...</option>';
-
-            if(itens.length === 0) {
-                corpoTabela.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum brinde cadastrado.</td></tr>';
-                return;
+        if (!token) throw new Error('Faça login para acessar o sistema.');
+        const resposta = await fetch(url, {...opcoes, headers: {
+            'Content-Type':'application/json', 'Authorization':'Bearer ' + token, ...opcoes.headers
+        }});
+        if (!resposta.ok) {
+            if (resposta.status === 401 || resposta.status === 403) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('meu_token_jwt');
+                atualizarRodape();
+                throw new Error('Acesso negado ou sessão expirada. Faça login novamente.');
             }
+            const texto = await resposta.text();
+            let mensagem = texto;
+            try {
+                const erro = JSON.parse(texto);
+                mensagem = erro.mensagem || erro.message || texto;
+                if (erro.erros) mensagem += ' ' + erro.erros.join('; ');
+            } catch (_) { /* A API anterior também devolvia texto simples. */ }
+            throw new Error(mensagem || 'Não foi possível concluir a operação.');
+        }
+        return resposta.status === 204 ? null : resposta.json();
+    }
 
+    function celula(linha, texto, classe) {
+        const td = document.createElement('td');
+        td.textContent = texto ?? 'Não registrado';
+        if (classe) td.className = classe;
+        linha.appendChild(td);
+        return td;
+    }
+    function mensagemTabela(id, texto, colunas) {
+        const corpo = el(id); corpo.replaceChildren();
+        const linha = document.createElement('tr');
+        celula(linha, texto).colSpan = colunas;
+        corpo.appendChild(linha);
+    }
+    function preencherSelect(id, dados, rotulo, primeiro) {
+        const select = el(id), selecionado = select.value;
+        select.replaceChildren(new Option(primeiro, ''));
+        dados.forEach(dado => select.add(new Option(rotulo(dado), dado.id)));
+        select.value = selecionado;
+        if (select.selectedIndex < 0) select.selectedIndex = 0;
+    }
+    function botao(texto, acao) {
+        const b = document.createElement('button');
+        b.textContent = texto; b.addEventListener('click', acao); return b;
+    }
+
+    async function carregarDados() {
+        try {
+            const [itens, resumo] = await Promise.all([api('/itens'), api('/itens/relatorio')]);
+            el('total-brindes').textContent = resumo.totalDeBrindesCadastrados;
+            el('valor-total').textContent = moeda(resumo.valorTotalArmazenado);
+            preencherSelect('mov-id-item', itens, i => `${i.codigo} - ${i.nome} (Estoque: ${i.quantidade})`, 'Selecione o Brinde...');
+            const corpo = el('tabela-itens'); corpo.replaceChildren();
             itens.forEach(item => {
-                let classeEstoque = item.quantidade < 20 ? 'estoque-baixo' : '';
-                corpoTabela.innerHTML += `
-                <tr>
-                    <td><strong>${item.codigo}</strong></td>
-                    <td>${item.nome}</td>
-                    <td class="${classeEstoque}">${item.quantidade} un.</td>
-                    <td>${item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                    <td>
-                        <button onclick="editarValor(${item.id}, ${item.valor})" style="background-color: #f0ad4e; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-right: 5px;">Editar</button>
-                        <button onclick="removerItem(${item.id})" style="background-color: #d9534f; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px;">Remover</button>
-                    </td>
-                </tr>`;
-                selectMov.innerHTML += `<option value="${item.id}">${item.codigo} - ${item.nome} (Estoque: ${item.quantidade})</option>`;
+                const linha = document.createElement('tr');
+                celula(linha, item.codigo); celula(linha, item.nome);
+                celula(linha, item.quantidade + ' un.', item.quantidade < 20 ? 'estoque-baixo' : '');
+                celula(linha, moeda(item.valor));
+                const acoes = celula(linha, '');
+                acoes.append(botao('Editar', () => editarValor(item.id, item.valor)), document.createTextNode(' '),
+                    botao('Remover', () => removerItem(item.id)));
+                corpo.appendChild(linha);
             });
-        }).catch(err => {
-            corpoTabela.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red; font-weight:bold;">Sessão expirada. Faça login novamente.</td></tr>';
-            localStorage.removeItem('token');
-            localStorage.removeItem('meu_token_jwt');
-            atualizarRodape();
-        });
+            if (!itens.length) mensagemTabela('tabela-itens', 'Nenhum brinde cadastrado.', 5);
+        } catch (erro) {
+            mensagemTabela('tabela-itens', erro.message, 5);
+            el('total-brindes').textContent = '—'; el('valor-total').textContent = '—';
+        }
     }
-
+    async function executarOperacao(acao) {
+        if (operacaoEmAndamento) return;
+        operacaoEmAndamento = true;
+        try { await acao(); await carregarDados(); }
+        catch (erro) { alert(erro.message); }
+        finally { operacaoEmAndamento = false; }
+    }
     function cadastrarItem() {
-        const codigo = document.getElementById('novo-codigo').value;
-        const nome = document.getElementById('novo-nome').value;
-        const quantidade = document.getElementById('novo-qtd').value;
-        const valor = document.getElementById('novo-valor').value;
-
-        if(!codigo || !nome || !quantidade || !valor) {
-            alert("Preencha todos os campos!"); return;
+        const dados = {codigo:el('novo-codigo').value.trim(), nome:el('novo-nome').value.trim(),
+            quantidade:Number(el('novo-qtd').value), valor:Number(el('novo-valor').value)};
+        if (!dados.codigo || !dados.nome || el('novo-qtd').value === '' || el('novo-valor').value === ''
+            || !Number.isInteger(dados.quantidade) || dados.quantidade < 0 || !Number.isFinite(dados.valor) || dados.valor < 0) {
+            alert('Preencha código, nome, quantidade inteira não negativa e valor não negativo.'); return;
         }
-
-        fetch('/itens', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + obterToken()
-            },
-            body: JSON.stringify({ codigo, nome, quantidade, valor })
-        }).then(res => {
-            if(res.ok) {
-                alert("Produto cadastrado com sucesso!");
-                carregarDados();
-            } else {
-                alert("Erro ao cadastrar ou Sessão Expirada.");
-            }
+        executarOperacao(async () => {
+            await api('/itens', {method:'POST', body:JSON.stringify(dados)});
+            ['novo-codigo','novo-nome','novo-qtd','novo-valor'].forEach(id => el(id).value = '');
+            alert('Produto cadastrado. O saldo inicial positivo foi registrado como ENTRADA.');
         });
     }
-
     function registrarMovimentacao() {
-        const idItem = document.getElementById('mov-id-item').value;
-        const tipo = document.getElementById('mov-tipo').value;
-        const quantidade = document.getElementById('mov-qtd').value;
-
-        if(!idItem || !quantidade) {
-            alert("Preencha todos os campos!"); return;
+        const itemId = Number(el('mov-id-item').value), quantidade = Number(el('mov-qtd').value);
+        if (!itemId || !Number.isInteger(quantidade) || quantidade <= 0) {
+            alert('Selecione o item e informe uma quantidade inteira positiva.'); return;
         }
-
-        fetch('/movimentacoes', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + obterToken()
-            },
-            body: JSON.stringify({ item: { id: idItem }, tipo: tipo, quantidade: quantidade })
-        }).then(res => {
-            if(res.ok) {
-                alert("Movimentação registrada com sucesso!");
-                carregarDados();
-            } else {
-                alert("Erro ao movimentar ou Sessão Expirada.");
-            }
+        executarOperacao(async () => {
+            await api('/movimentacoes', {method:'POST', body:JSON.stringify({item:{id:itemId},
+                tipo:el('mov-tipo').value, quantidade, observacao:el('mov-observacao').value.trim() || null})});
+            el('mov-qtd').value = ''; el('mov-observacao').value = '';
+            alert('Movimentação registrada com seu usuário autenticado.');
         });
     }
-
     function removerItem(id) {
-        if(confirm("Tem certeza que deseja apagar este brinde?")) {
-            fetch(`/itens/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + obterToken() }
-            }).then(res => {
-                if(res.ok) carregarDados();
-                else alert("Não é possível apagar itens com movimentações.");
-            });
+        if (confirm('Excluir este item? Itens com histórico são preservados e não podem ser excluídos.')) {
+            executarOperacao(() => api(`/itens/${id}`, {method:'DELETE'}));
         }
     }
-
-    function editarValor(id, valorAtual) {
-        let novoValorStr = prompt("Digite o novo valor (ex: 25.50):", valorAtual);
-        if (novoValorStr !== null && novoValorStr.trim() !== "") {
-            let novoValor = parseFloat(novoValorStr.replace(',', '.'));
-            fetch(`/itens/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + obterToken()
-                },
-                body: JSON.stringify({ valor: novoValor })
-            }).then(res => {
-                if(res.ok) carregarDados();
-                else alert("Erro ao atualizar valor.");
-            });
-        }
+    function editarValor(id, atual) {
+        const texto = prompt('Novo valor unitário:', atual);
+        if (texto === null) return;
+        const valor = Number(texto.trim().replace(',', '.'));
+        if (!texto.trim() || !Number.isFinite(valor) || valor < 0) { alert('Valor inválido.'); return; }
+        executarOperacao(() => api(`/itens/${id}`, {method:'PUT', body:JSON.stringify({valor})}));
     }
-
     function atualizarRodape() {
-        const area = document.getElementById('area-autenticacao');
-        if (obterToken()) {
-            area.innerHTML = '<button onclick="fazerLogout()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight:bold;">Desconectar (Sair)</button>';
-        } else {
-            area.innerHTML = '<button onclick="window.location.href=\'/login.html\'" style="background-color: #333; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight:bold;">Acesso Gerencial (Login)</button>';
-        }
+        el('area-autenticacao').replaceChildren(obterToken()
+            ? botao('Desconectar (Sair)', fazerLogout)
+            : botao('Acesso Gerencial (Login)', () => window.location.href = '/login.html'));
     }
-
     function fazerLogout() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('meu_token_jwt');
+        localStorage.removeItem('token'); localStorage.removeItem('meu_token_jwt');
         window.location.href = '/login.html';
     }
 
-    // Inicialização da tela
-    window.onload = () => {
-        atualizarRodape();
-        carregarDados();
-    };
+    async function abrirAba(aba) {
+        const relatorio = aba === 'relatorio';
+        el('painel-estoque').hidden = relatorio; el('painel-relatorio').hidden = !relatorio;
+        el('aba-estoque').setAttribute('aria-pressed', String(!relatorio));
+        el('aba-relatorio').setAttribute('aria-pressed', String(relatorio));
+        if (!relatorio) { carregarDados(); return; }
+        try {
+            const [itens, responsaveis] = await Promise.all([api('/itens'), api('/movimentacoes/responsaveis')]);
+            preencherSelect('filtro-item', itens, i => `${i.codigo} - ${i.nome}`, 'Todos');
+            preencherSelect('filtro-responsavel', responsaveis, u => u.login, 'Todos');
+            aplicarFiltros();
+        } catch (erro) {
+            ++consultaAtual;
+            mensagemTabela('tabela-movimentacoes', erro.message, 10);
+            el('status-relatorio').textContent = erro.message;
+            el('pagina-anterior').disabled = true; el('pagina-proxima').disabled = true;
+        }
+    }
+    function aplicarFiltros() {
+        const inicio = el('filtro-inicio').value, fim = el('filtro-fim').value;
+        if (inicio && fim && inicio > fim) {
+            el('status-relatorio').textContent = 'A data inicial não pode ser posterior à final.'; return;
+        }
+        filtrosAplicados = new URLSearchParams();
+        const campos = {dataInicial:inicio, dataFinal:fim, responsavelId:el('filtro-responsavel').value,
+            tipo:el('filtro-tipo').value, itemId:el('filtro-item').value};
+        Object.entries(campos).forEach(([chave, valor]) => { if (valor) filtrosAplicados.set(chave, valor); });
+        consultarRelatorio(0);
+    }
+    function limparFiltros() { el('form-filtros').reset(); aplicarFiltros(); }
+    async function consultarRelatorio(pagina) {
+        const consulta = ++consultaAtual;
+        el('status-relatorio').textContent = 'Carregando movimentações...';
+        el('pagina-anterior').disabled = true; el('pagina-proxima').disabled = true;
+        mensagemTabela('tabela-movimentacoes', 'Carregando...', 10);
+        const parametros = new URLSearchParams(filtrosAplicados);
+        parametros.set('pagina', pagina); parametros.set('tamanho', '20');
+        try {
+            const dados = await api('/movimentacoes/relatorio?' + parametros);
+            if (consulta !== consultaAtual) return; // Impede uma resposta antiga de sobrescrever filtros novos.
+            paginaRelatorio = dados.pagina;
+            const corpo = el('tabela-movimentacoes'); corpo.replaceChildren();
+            dados.conteudo.forEach(m => {
+                const linha = document.createElement('tr');
+                // LocalDateTime já representa horário de São Paulo; não converter pelo fuso do navegador.
+                const partes = m.dataMovimentacao ? m.dataMovimentacao.split('T') : [];
+                celula(linha, m.id);
+                celula(linha, partes[0] ? partes[0].split('-').reverse().join('/') : null);
+                celula(linha, partes[1] ? partes[1].substring(0,8) : null);
+                celula(linha, m.tipo === 'SAIDA' ? 'SAÍDA' : m.tipo, m.tipo === 'ENTRADA' ? 'tipo-entrada' : 'tipo-saida');
+                celula(linha, `${m.item.codigo} - ${m.item.nome}`);
+                celula(linha, m.quantidade);
+                celula(linha, m.responsavel ? m.responsavel.login : 'Responsável não registrado');
+                celula(linha, m.observacao || '—'); celula(linha, m.estoqueAnterior); celula(linha, m.estoquePosterior);
+                corpo.appendChild(linha);
+            });
+            if (!dados.conteudo.length) mensagemTabela('tabela-movimentacoes', 'Nenhuma movimentação encontrada.', 10);
+            el('status-relatorio').textContent = `${dados.totalElementos} movimentação(ões) encontrada(s).`;
+            el('pagina-info').textContent = dados.totalPaginas ? `Página ${dados.pagina + 1} de ${dados.totalPaginas}` : 'Sem resultados';
+            el('pagina-anterior').disabled = dados.pagina <= 0;
+            el('pagina-proxima').disabled = dados.pagina + 1 >= dados.totalPaginas;
+        } catch (erro) {
+            if (consulta !== consultaAtual) return;
+            el('status-relatorio').textContent = erro.message;
+            el('pagina-info').textContent = '';
+            mensagemTabela('tabela-movimentacoes', erro.message, 10);
+        }
+    }
+    el('form-filtros').addEventListener('submit', evento => { evento.preventDefault(); aplicarFiltros(); });
+    window.onload = () => { atualizarRodape(); carregarDados(); };
 </script>
 </body>
 </html>

@@ -1,14 +1,18 @@
 package api_brindes.controller;
 
 import api_brindes.model.Item;
+import api_brindes.dto.CadastrarItemDTO;
+import api_brindes.dto.AtualizarValorDTO;
+import api_brindes.service.ItemService;
+import jakarta.validation.Valid;
 import api_brindes.repository.ItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import api_brindes.repository.MovimentacaoRepository;
-import org.springframework.transaction.annotation.Transactional;
+
+
 
 
 import java.util.HashMap;
@@ -19,7 +23,7 @@ import java.util.Map;
 @RequestMapping("/itens")
 public class ItemController {
     @Autowired
-    private MovimentacaoRepository movimentacaoRepository;
+    private ItemService itemService;
     @Autowired
     private ItemRepository itemRepository;
 
@@ -29,8 +33,8 @@ public class ItemController {
     }
 
     @PostMapping
-    public Item salvar(@RequestBody Item item) {
-        return itemRepository.save(item);
+    public Item salvar(@RequestBody @Valid CadastrarItemDTO item) {
+        return itemService.cadastrar(item);
     }
 
     @GetMapping("/relatorio")
@@ -55,29 +59,16 @@ public class ItemController {
         return ResponseEntity.ok(relatorio);
     }
 
-    // 5. REMOVER ITEM
-    // Acessado via: DELETE http://localhost:8080/itens/1
+
     @DeleteMapping("/{id}")
-    @Transactional
-    public ResponseEntity apagar(@PathVariable Integer id) { // <-- Troque Long por Integer AQUI
-
-        movimentacaoRepository.deleteAllByItemId(id);
-        itemRepository.deleteById(id);
-
+    public ResponseEntity<Void> apagar(@PathVariable Integer id) {
+        itemService.apagar(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Item> atualizarValor(@PathVariable Integer id, @RequestBody Item itemAtualizado) {
-        // Trocamos Long por Integer e colocamos itemRepository
-        Item itemExistente = itemRepository.findById(id).orElseThrow();
-
-        // Atualiza apenas o valor unitário
-        itemExistente.setValor(itemAtualizado.getValor());
-
-        itemRepository.save(itemExistente);
-        return ResponseEntity.ok(itemExistente);
+    public ResponseEntity<Item> atualizarValor(@PathVariable Integer id,
+                                             @RequestBody @Valid AtualizarValorDTO dados) {
+        return ResponseEntity.ok(itemService.atualizarValor(id, dados));
     }
-
-
 }

@@ -22,6 +22,11 @@ public class Usuario implements UserDetails {
     public Usuario() {
     }
 
+    public Usuario(String login, String senha) {
+        this.login = login;
+        this.senha = senha;
+    }
+
     public Long getId() { return id; }
     public String getLogin() { return login; }
     public String getSenha() { return senha; }

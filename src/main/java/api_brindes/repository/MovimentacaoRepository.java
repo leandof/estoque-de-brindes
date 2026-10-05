@@ -1,18 +1,20 @@
 package api_brindes.repository;
 
 import api_brindes.model.Movimentacao;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.transaction.annotation.Transactional;
+import api_brindes.model.Usuario;
+import org.springframework.data.jpa.repository.*;
+import java.util.List;
 
-import java.util.List; // Não esqueça dessa importação para a Lista!
+public interface MovimentacaoRepository extends JpaRepository<Movimentacao, Integer>,
+        JpaSpecificationExecutor<Movimentacao> {
+    boolean existsByItemId(Integer itemId);
 
-public interface MovimentacaoRepository extends JpaRepository<Movimentacao, Long> {
+    @EntityGraph(attributePaths = {"item", "responsavel"})
+    List<Movimentacao> findAllByOrderByDataMovimentacaoDescIdDesc();
 
-    // O método novo que criamos para limpar os filhos antes de apagar o pai
-    @Transactional
-    void deleteAllByItemId(Integer itemId);
+    @EntityGraph(attributePaths = {"item", "responsavel"})
+    List<Movimentacao> findByItemIdOrderByDataMovimentacaoDescIdDesc(Integer itemId);
 
-    // O método que já existia para listar o histórico e tinha sumido (agora usando Integer!)
-    List<Movimentacao> findByItemIdOrderByDataMovimentacaoDesc(Integer itemId);
-
+    @Query("select distinct m.responsavel from Movimentacao m where m.responsavel is not null order by m.responsavel.login")
+    List<Usuario> findResponsaveisComMovimentacoes();
 }
