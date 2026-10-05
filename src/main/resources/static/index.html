@@ -3,163 +3,793 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#a71920">
     <title>Truckvan - Controle de Estoque</title>
-
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23b32025'/><text x='50' y='75' font-size='75' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'>T</text></svg>">
-
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23a71920'/><text x='50' y='71' font-size='66' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'>T</text></svg>">
     <style>
         :root {
-            --vermelho-truckvan: #b32025;
-            --vermelho-escuro: #8a171c;
-            --cinza-fundo: #f4f4f9;
+            --truckvan-red: #b32025;
+            --truckvan-red-dark: #84151a;
+            --truckvan-red-deep: #641014;
+            --ink: #1b1e23;
+            --ink-2: #2b3038;
+            --muted: #6c7480;
+            --line: #e5e8ec;
+            --surface: #ffffff;
+            --surface-2: #f7f8fa;
+            --page: #eef1f4;
+            --success: #18794e;
+            --warning: #b54708;
+            --shadow: 0 20px 50px rgba(20, 25, 32, .10);
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 12px;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--cinza-fundo); margin: 0; }
-        .header { background-color: var(--vermelho-truckvan); color: white; padding: 20px; border-bottom: 5px solid var(--vermelho-escuro); display: flex; align-items: center; justify-content: center; gap: 20px; }
-        .logo-t { background-color: white; color: var(--vermelho-truckvan); font-size: 50px; font-weight: 900; width: 75px; height: 75px; display: flex; align-items: center; justify-content: center; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-family: 'Arial Black', sans-serif; }
-        .header-text { text-align: left; }
-        .header h1 { margin: 0; font-size: 2.5em; letter-spacing: 2px; font-weight: 900; line-height: 1; }
-        .header p { margin: 5px 0 0 0; font-size: 1.1em; opacity: 0.9; }
-        .container { max-width: 1100px; margin: 30px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .dashboard { display: flex; gap: 20px; margin-bottom: 30px; }
-        .card { background: var(--vermelho-truckvan); color: white; padding: 20px; border-radius: 8px; flex: 1; text-align: center; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
-        .card h3 { margin: 0; font-size: 1.1em; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
-        .card p { margin: 10px 0 0; font-size: 2.5em; font-weight: bold; }
-        .painel-acoes { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--vermelho-truckvan); }
-        .painel-acoes h3 { margin-top: 0; color: #333; }
-        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        button { background-color: var(--vermelho-truckvan); color: white; border: none; padding: 10px 20px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.3s; }
-        button:hover { background-color: var(--vermelho-escuro); }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 15px; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background-color: #333; color: white; font-weight: 600; text-transform: uppercase; font-size: 13px; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        tr:hover { background-color: #f1f1f1; }
-        .estoque-baixo { color: #dc3545; font-weight: bold; }
-        .abas { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
-        .abas button[aria-pressed="false"] { background:#666; }
-        .filtros { display:flex; flex-wrap:wrap; gap:12px; align-items:end; }
-        .filtros label { display:flex; flex-direction:column; gap:6px; font-size:14px; }
-        .tabela-responsiva { overflow-x:auto; }
-        .tipo-entrada { color:#176b39; font-weight:bold; }
-        .tipo-saida { color:#b32025; font-weight:bold; }
-        .paginacao { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:15px; }
-        button:disabled { opacity:.5; cursor:not-allowed; }
-        .erro { color:#b32025; }
-        [hidden] { display:none !important; }
-        @media(max-width:700px) {
-            .container { margin:12px; padding:15px; }
-            .dashboard { flex-direction:column; }
-            .header h1 { font-size:1.7em; }
-            .painel-acoes input, .painel-acoes select { max-width:100%; box-sizing:border-box; margin:4px 0; }
-            .filtros label, .filtros input, .filtros select { width:100%; box-sizing:border-box; }
+
+        * { box-sizing: border-box; }
+        html { min-width: 0; background: var(--page); }
+        body {
+            margin: 0;
+            min-width: 0;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 100% 0%, rgba(179,32,37,.10), transparent 28rem),
+                linear-gradient(135deg, #f6f7f9 0%, #edf0f3 100%);
+            font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            min-height: 100vh;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: .42;
+            background-image: linear-gradient(90deg, transparent 49.75%, rgba(255,255,255,.85) 50%, transparent 50.25%);
+            background-size: 230px 100%;
+            mask-image: linear-gradient(to bottom, transparent 0, #000 26%, #000 74%, transparent 100%);
+        }
+
+        button, input, select { font: inherit; }
+        button { -webkit-tap-highlight-color: transparent; }
+        [hidden] { display: none !important; }
+
+        .app-shell {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 270px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            padding: 22px 18px;
+            background:
+                linear-gradient(160deg, rgba(255,255,255,.04), transparent 42%),
+                linear-gradient(180deg, #24282f 0%, #171a1f 100%);
+            color: #fff;
+            border-right: 1px solid rgba(255,255,255,.06);
+            overflow: hidden;
+        }
+        .sidebar::after {
+            content: "";
+            position: absolute;
+            width: 300px;
+            height: 120px;
+            border: 18px solid rgba(179,32,37,.18);
+            border-left: 0;
+            border-radius: 0 90px 90px 0;
+            transform: rotate(-18deg);
+            left: -110px;
+            bottom: 42px;
+            pointer-events: none;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            padding: 8px 8px 22px;
+            border-bottom: 1px solid rgba(255,255,255,.10);
+            margin-bottom: 22px;
+        }
+        .brand-logo {
+            width: 54px;
+            height: 54px;
+            flex: 0 0 54px;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 13px;
+            padding: 5px;
+            box-shadow: 0 10px 25px rgba(0,0,0,.28);
+        }
+        .brand-copy { min-width: 0; }
+        .brand-name {
+            margin: 0;
+            font-weight: 900;
+            letter-spacing: .10em;
+            font-size: 1.08rem;
+        }
+        .brand-subtitle {
+            margin: 5px 0 0;
+            font-size: .76rem;
+            color: #b9c0c9;
+            line-height: 1.35;
+        }
+
+        .nav-label {
+            margin: 0 10px 10px;
+            color: #8e97a3;
+            font-size: .70rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .14em;
+        }
+        .abas { display: grid; gap: 8px; }
+        .abas button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-height: 48px;
+            padding: 0 13px;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: #d8dde3;
+            background: transparent;
+            text-align: left;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s ease;
+        }
+        .abas button svg { width: 20px; height: 20px; flex: 0 0 auto; }
+        .abas button:hover { background: rgba(255,255,255,.07); color: #fff; }
+        .abas button[aria-pressed="true"] {
+            background: linear-gradient(135deg, var(--truckvan-red), #95191e);
+            color: #fff;
+            box-shadow: 0 10px 24px rgba(179,32,37,.28);
+        }
+        .abas button[aria-pressed="false"] { background: transparent; }
+
+        .sidebar-bottom {
+            position: absolute;
+            z-index: 1;
+            left: 26px;
+            right: 26px;
+            bottom: 24px;
+            font-size: .74rem;
+            color: #8f98a4;
+            line-height: 1.45;
+        }
+        .sidebar-bottom strong { color: #d9dde2; }
+
+        .main { min-width: 0; }
+        .topbar {
+            min-height: 82px;
+            padding: 16px clamp(18px, 4vw, 44px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            border-bottom: 1px solid rgba(26,30,35,.08);
+            background: rgba(255,255,255,.72);
+            backdrop-filter: blur(14px);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .topbar-title { min-width: 0; }
+        .topbar-eyebrow {
+            margin: 0 0 4px;
+            color: var(--truckvan-red);
+            font-size: .72rem;
+            font-weight: 900;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+        .topbar h1 {
+            margin: 0;
+            font-size: clamp(1.15rem, 2vw, 1.45rem);
+            line-height: 1.2;
+        }
+        #area-autenticacao { flex: 0 0 auto; }
+        #area-autenticacao button {
+            margin: 0;
+            background: #fff;
+            color: var(--ink);
+            border: 1px solid var(--line);
+            box-shadow: 0 7px 20px rgba(20,25,32,.06);
+        }
+        #area-autenticacao button:hover {
+            color: var(--truckvan-red);
+            border-color: rgba(179,32,37,.35);
+            background: #fff;
+        }
+
+        .content {
+            width: min(1450px, 100%);
+            margin: 0 auto;
+            padding: clamp(22px, 4vw, 44px);
+        }
+        .page-heading {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 22px;
+            margin-bottom: 24px;
+        }
+        .page-heading h2 {
+            margin: 0;
+            font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+            line-height: 1.1;
+            letter-spacing: -.04em;
+        }
+        .page-heading p {
+            max-width: 720px;
+            margin: 9px 0 0;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: #4d5560;
+            font-size: .78rem;
+            font-weight: 800;
+            box-shadow: 0 8px 24px rgba(20,25,32,.05);
+            white-space: nowrap;
+        }
+        .status-pill::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #1f9d63;
+            box-shadow: 0 0 0 4px rgba(31,157,99,.12);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        .card {
+            position: relative;
+            overflow: hidden;
+            min-height: 154px;
+            padding: 25px;
+            border-radius: var(--radius-xl);
+            color: #fff;
+            box-shadow: var(--shadow);
+        }
+        .card::after {
+            content: "";
+            position: absolute;
+            width: 160px;
+            height: 58px;
+            right: -35px;
+            bottom: 18px;
+            border: 10px solid rgba(255,255,255,.11);
+            border-left-width: 42px;
+            border-radius: 8px 34px 10px 8px;
+            transform: skewX(-12deg);
+        }
+        .card-primary { background: linear-gradient(135deg, #bd262c 0%, #8f151a 100%); }
+        .card-dark { background: linear-gradient(135deg, #343a43 0%, #1c2026 100%); }
+        .card h3 {
+            margin: 0;
+            font-size: .73rem;
+            font-weight: 900;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            opacity: .72;
+        }
+        .card p {
+            position: relative;
+            z-index: 1;
+            margin: 12px 0 0;
+            font-size: clamp(2rem, 4vw, 3rem);
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -.05em;
+        }
+        .card small {
+            display: block;
+            margin-top: 14px;
+            color: rgba(255,255,255,.70);
+            font-size: .78rem;
+        }
+
+        .panel {
+            background: rgba(255,255,255,.94);
+            border: 1px solid rgba(220,224,230,.85);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+        }
+        .panel + .panel { margin-top: 18px; }
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 22px 24px;
+            border-bottom: 1px solid var(--line);
+        }
+        .panel-header h3, .panel-header h2 { margin: 0; font-size: 1rem; }
+        .panel-header p { margin: 5px 0 0; color: var(--muted); font-size: .82rem; }
+        .panel-body { padding: 24px; }
+
+        .painel-acoes {
+            background: rgba(255,255,255,.94);
+            border: 1px solid rgba(220,224,230,.85);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+            margin-bottom: 18px;
+            overflow: hidden;
+        }
+        .painel-acoes > h3 {
+            margin: 0;
+            padding: 22px 24px 15px;
+            font-size: 1rem;
+        }
+        .action-block { padding: 0 24px 24px; }
+        .action-block + .action-block {
+            padding-top: 22px;
+            border-top: 1px solid var(--line);
+        }
+        .action-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 13px;
+            color: #353b43;
+            font-size: .84rem;
+            font-weight: 900;
+        }
+        .action-title::before {
+            content: "";
+            width: 4px;
+            height: 18px;
+            border-radius: 999px;
+            background: var(--truckvan-red);
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 12px;
+            align-items: center;
+        }
+        .span-2 { grid-column: span 2; }
+        .span-3 { grid-column: span 3; }
+        .span-4 { grid-column: span 4; }
+        .span-5 { grid-column: span 5; }
+        .span-6 { grid-column: span 6; }
+        .span-12 { grid-column: span 12; }
+
+        input, select {
+            width: 100%;
+            min-width: 0;
+            height: 44px;
+            padding: 0 12px;
+            color: var(--ink);
+            background: #fbfcfd;
+            border: 1px solid #dce1e6;
+            border-radius: 11px;
+            outline: none;
+            transition: border-color .18s, box-shadow .18s, background .18s;
+        }
+        input:focus, select:focus {
+            background: #fff;
+            border-color: rgba(179,32,37,.65);
+            box-shadow: 0 0 0 4px rgba(179,32,37,.10);
+        }
+        input::placeholder { color: #9aa2ad; }
+
+        button {
+            min-height: 44px;
+            padding: 0 16px;
+            border: 0;
+            border-radius: 11px;
+            color: #fff;
+            background: linear-gradient(135deg, var(--truckvan-red), #99191e);
+            font-size: .84rem;
+            font-weight: 850;
+            cursor: pointer;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+            box-shadow: 0 8px 20px rgba(179,32,37,.18);
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, #c72b31, var(--truckvan-red-dark));
+            box-shadow: 0 12px 26px rgba(179,32,37,.24);
+        }
+        button:active:not(:disabled) { transform: translateY(0); }
+        button:disabled { opacity: .46; cursor: not-allowed; box-shadow: none; }
+        .button-secondary {
+            color: #3e444c;
+            background: #fff;
+            border: 1px solid var(--line);
+            box-shadow: none;
+        }
+        .button-secondary:hover:not(:disabled) {
+            color: var(--truckvan-red);
+            background: #fff;
+            border-color: rgba(179,32,37,.32);
+            box-shadow: 0 9px 22px rgba(30,34,40,.06);
+        }
+
+        .table-panel {
+            background: #fff;
+            border: 1px solid rgba(220,224,230,.85);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .table-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 21px 24px;
+            border-bottom: 1px solid var(--line);
+        }
+        .table-heading h2 { margin: 0; font-size: 1rem; }
+        .table-heading span { color: var(--muted); font-size: .76rem; }
+        .tabela-responsiva {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 720px; }
+        th, td {
+            padding: 15px 18px;
+            border-bottom: 1px solid #edf0f2;
+            text-align: left;
+            white-space: nowrap;
+            font-size: .84rem;
+        }
+        th {
+            color: #747d88;
+            background: #fafbfc;
+            font-size: .68rem;
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        tbody tr { transition: background .16s ease; }
+        tbody tr:hover { background: #fafbfc; }
+        tbody tr:last-child td { border-bottom: 0; }
+        td button {
+            min-height: 34px;
+            padding: 0 11px;
+            margin-right: 6px;
+            font-size: .75rem;
+            border-radius: 9px;
+            box-shadow: none;
+        }
+        td button + button {
+            color: var(--truckvan-red);
+            background: #fff;
+            border: 1px solid rgba(179,32,37,.22);
+        }
+        td button + button:hover:not(:disabled) { color: #fff; }
+        .estoque-baixo { color: #d92d20; font-weight: 900; }
+        .tipo-entrada { color: var(--success); font-weight: 900; }
+        .tipo-saida { color: var(--truckvan-red); font-weight: 900; }
+        .erro { color: var(--truckvan-red); }
+
+        .report-intro {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 20px;
+            align-items: end;
+            margin-bottom: 20px;
+        }
+        .report-intro h2 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.3rem); letter-spacing: -.04em; }
+        .report-intro p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+        .filtros {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(140px, 1fr)) auto auto;
+            gap: 12px;
+            align-items: end;
+            padding: 22px;
+        }
+        .filtros label {
+            display: grid;
+            gap: 7px;
+            color: #555e69;
+            font-size: .73rem;
+            font-weight: 800;
+        }
+        .filtros button[type="button"] {
+            color: #414850;
+            background: #fff;
+            border: 1px solid var(--line);
+            box-shadow: none;
+        }
+        .filtros button[type="button"]:hover:not(:disabled) {
+            color: var(--truckvan-red);
+            background: #fff;
+            border-color: rgba(179,32,37,.35);
+        }
+        #status-relatorio {
+            min-height: 20px;
+            margin: 14px 2px 10px;
+            color: #525a64;
+            font-size: .82rem;
+            font-weight: 700;
+        }
+        .table-helper { margin: 0 2px 10px; color: var(--muted); font-size: .74rem; }
+        #painel-relatorio table { min-width: 1180px; }
+        .paginacao {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 18px 4px 0;
+            flex-wrap: wrap;
+        }
+        .paginacao button { min-height: 38px; padding: 0 13px; box-shadow: none; }
+        #pagina-info { color: var(--muted); font-size: .78rem; font-weight: 800; }
+        .report-note {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-top: 18px;
+            padding: 16px 18px;
+            color: #656d77;
+            background: rgba(255,255,255,.64);
+            border: 1px solid rgba(220,224,230,.85);
+            border-radius: 14px;
+            font-size: .76rem;
+        }
+        .report-note p { margin: 0; line-height: 1.5; }
+        .report-note button { flex: 0 0 auto; }
+
+        .footer {
+            padding: 26px 4px 4px;
+            text-align: center;
+            color: #89919a;
+            font-size: .72rem;
+        }
+
+        @media (max-width: 1180px) {
+            .filtros { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+            .form-grid .span-2, .form-grid .span-3, .form-grid .span-4 { grid-column: span 6; }
+            .form-grid .span-5, .form-grid .span-6 { grid-column: span 6; }
+        }
+        @media (max-width: 900px) {
+            .app-shell { grid-template-columns: 1fr; }
+            .sidebar {
+                position: sticky;
+                z-index: 30;
+                height: auto;
+                min-height: auto;
+                padding: 11px 14px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                border-right: 0;
+                border-bottom: 1px solid rgba(255,255,255,.08);
+            }
+            .sidebar::after, .sidebar-bottom, .nav-label { display: none; }
+            .brand { padding: 0; margin: 0; border: 0; flex: 0 0 auto; }
+            .brand-logo { width: 42px; height: 42px; flex-basis: 42px; border-radius: 10px; }
+            .brand-subtitle { display: none; }
+            .brand-name { font-size: .92rem; }
+            .abas { margin-left: auto; display: flex; min-width: 0; }
+            .abas button { width: auto; min-height: 40px; padding: 0 11px; font-size: .76rem; }
+            .abas button svg { width: 18px; height: 18px; }
+            .topbar { top: 65px; min-height: 70px; }
+            .report-intro { grid-template-columns: 1fr; align-items: start; }
+        }
+        @media (max-width: 700px) {
+            .content { padding: 18px 14px 28px; }
+            .topbar { padding: 12px 14px; }
+            .topbar-eyebrow { display: none; }
+            .topbar h1 { font-size: 1rem; }
+            #area-autenticacao button { min-height: 38px; padding: 0 10px; font-size: .74rem; }
+            .page-heading { align-items: start; flex-direction: column; gap: 12px; }
+            .status-pill { font-size: .72rem; }
+            .dashboard { grid-template-columns: 1fr; gap: 12px; }
+            .card { min-height: 132px; padding: 21px; }
+            .painel-acoes > h3 { padding: 19px 18px 12px; }
+            .action-block { padding: 0 18px 20px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-grid > * { grid-column: 1 / -1 !important; }
+            .filtros { grid-template-columns: 1fr; padding: 18px; }
+            .filtros label, .filtros input, .filtros select, .filtros button { width: 100%; }
+            .table-heading { padding: 18px; }
+            th, td { padding: 13px 15px; }
+            .report-note { align-items: stretch; flex-direction: column; }
+            .report-note button { width: 100%; }
+        }
+        @media (max-width: 500px) {
+            .sidebar { gap: 8px; }
+            .brand-copy { display: none; }
+            .abas { flex: 1 1 auto; justify-content: flex-end; }
+            .abas button { flex: 1 1 auto; justify-content: center; padding: 0 8px; }
+            .abas button span { display: none; }
+            .topbar { top: 64px; }
+            .page-heading h2, .report-intro h2 { font-size: 1.65rem; }
         }
     </style>
 </head>
 <body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <img class="brand-logo" src="logo-truckvan.png" alt="Logo Truckvan">
+            <div class="brand-copy">
+                <p class="brand-name">TRUCKVAN</p>
+                <p class="brand-subtitle">Controle de estoque<br>e movimentações</p>
+            </div>
+        </div>
 
-<div class="header">
-    <div class="logo-t">T</div>
-    <div class="header-text">
-        <h1>TRUCKVAN</h1>
-        <p>Sistema de Controle de Estoque</p>
-    </div>
+        <p class="nav-label">Navegação</p>
+        <nav class="abas" aria-label="Seções do sistema">
+            <button id="aba-estoque" aria-pressed="true" onclick="abrirAba('estoque')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4.5 7.7 7.5 4.2 7.5-4.2M12 12v9"/></svg>
+                <span>Estoque</span>
+            </button>
+            <button id="aba-relatorio" aria-pressed="false" onclick="abrirAba('relatorio')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+                <span>Relatório de Movimentações</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <strong>Operação em movimento.</strong><br>
+            Interface inspirada em transporte, carretas e unidades móveis Truckvan.
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div class="topbar-title">
+                <p class="topbar-eyebrow">Truckvan • Operações</p>
+                <h1>Sistema de Controle de Estoque</h1>
+            </div>
+            <div id="area-autenticacao" aria-label="Área de autenticação"></div>
+        </header>
+
+        <div class="content">
+            <section id="painel-estoque" aria-label="Estoque">
+                <div class="page-heading">
+                    <div>
+                        <h2>Visão geral do estoque</h2>
+                        <p>Acompanhe os brindes, o patrimônio armazenado e registre entradas e saídas em uma única central operacional.</p>
+                    </div>
+                    <span class="status-pill">Sistema operacional</span>
+                </div>
+
+                <div class="dashboard">
+                    <article class="card card-primary">
+                        <h3>Total de Itens</h3>
+                        <p id="total-brindes">-</p>
+                        <small>Quantidade consolidada em estoque</small>
+                    </article>
+                    <article class="card card-dark">
+                        <h3>Patrimônio Armazenado</h3>
+                        <p id="valor-total">-</p>
+                        <small>Valor estimado dos itens armazenados</small>
+                    </article>
+                </div>
+
+                <div class="painel-acoes">
+                    <h3>Central de operações</h3>
+                    <div class="action-block">
+                        <div class="action-title">Novo Brinde</div>
+                        <div class="form-grid">
+                            <input class="span-2" type="text" id="novo-codigo" placeholder="Código (Ex: CAN-01)" aria-label="Código do novo brinde">
+                            <input class="span-4" type="text" id="novo-nome" placeholder="Nome do Brinde" aria-label="Nome do novo brinde">
+                            <input class="span-2" type="number" id="novo-qtd" placeholder="Qtd Inicial" aria-label="Quantidade inicial">
+                            <input class="span-2" type="number" id="novo-valor" placeholder="Valor Un (R$)" step="0.01" aria-label="Valor unitário">
+                            <button class="span-2" onclick="cadastrarItem()">Cadastrar Produto</button>
+                        </div>
+                    </div>
+                    <div class="action-block">
+                        <div class="action-title">Movimentar estoque</div>
+                        <div class="form-grid">
+                            <select class="span-4" id="mov-id-item" aria-label="Brinde para movimentação">
+                                <option value="">Selecione o Brinde...</option>
+                            </select>
+                            <select class="span-2" id="mov-tipo" aria-label="Tipo de movimentação">
+                                <option value="ENTRADA">Entrada (Adicionar)</option>
+                                <option value="SAIDA">Saída (Retirar)</option>
+                            </select>
+                            <input class="span-2" type="number" id="mov-qtd" placeholder="Quantidade" aria-label="Quantidade da movimentação">
+                            <input class="span-2" type="text" id="mov-observacao" maxlength="500" placeholder="Observação (opcional)" aria-label="Observação da movimentação">
+                            <button class="span-2" onclick="registrarMovimentacao()">Confirmar Movimentação</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-panel">
+                    <div class="table-heading">
+                        <h2>Inventário Atual</h2>
+                        <span>Estoque em tempo real</span>
+                    </div>
+                    <div class="tabela-responsiva">
+                        <table aria-label="Inventário atual">
+                            <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nome do Brinde</th>
+                                <th>Em Estoque</th>
+                                <th>Valor Unitário</th>
+                                <th>Ações</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tabela-itens">
+                            <tr><td colspan="5" style="text-align:center;">Verificando credenciais...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="painel-relatorio" aria-labelledby="titulo-relatorio" hidden>
+                <div class="report-intro">
+                    <div>
+                        <h2 id="titulo-relatorio">Relatório de Movimentações</h2>
+                        <p>Consulte entradas e saídas por período, responsável, tipo e produto. Novos registros usam o horário de Brasília e o responsável é identificado pelo login.</p>
+                    </div>
+                    <span class="status-pill">Rastreabilidade ativa</span>
+                </div>
+
+                <form id="form-filtros" class="painel-acoes filtros">
+                    <label>Data inicial<input type="date" id="filtro-inicio"></label>
+                    <label>Data final<input type="date" id="filtro-fim"></label>
+                    <label>Responsável<select id="filtro-responsavel"><option value="">Todos</option></select></label>
+                    <label>Tipo<select id="filtro-tipo"><option value="">Todos</option><option value="ENTRADA">ENTRADA</option><option value="SAIDA">SAÍDA</option></select></label>
+                    <label>Produto/item<select id="filtro-item"><option value="">Todos</option></select></label>
+                    <button type="submit">Filtrar</button>
+                    <button type="button" onclick="limparFiltros()">Limpar filtros</button>
+                </form>
+
+                <p id="status-relatorio" role="status" aria-live="polite"></p>
+                <p class="table-helper">Em telas menores, deslize a tabela horizontalmente para consultar todas as colunas.</p>
+
+                <div class="table-panel">
+                    <div class="table-heading">
+                        <h2>Histórico operacional</h2>
+                        <span>Movimentações registradas</span>
+                    </div>
+                    <div class="tabela-responsiva">
+                        <table aria-label="Movimentações de estoque">
+                            <thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Tipo</th><th>Produto/item</th><th>Quantidade</th><th>Responsável / login</th><th>Observação</th><th>Estoque anterior</th><th>Estoque posterior</th></tr></thead>
+                            <tbody id="tabela-movimentacoes"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="paginacao">
+                    <button id="pagina-anterior" onclick="consultarRelatorio(paginaRelatorio - 1)" disabled>Anterior</button>
+                    <span id="pagina-info"></span>
+                    <button id="pagina-proxima" onclick="consultarRelatorio(paginaRelatorio + 1)" disabled>Próxima</button>
+                </div>
+
+                <div class="report-note">
+                    <p>Registros antigos podem não conter responsável ou saldos. Esses valores não são estimados.</p>
+                    <button disabled title="Evolução futura: PDF e Excel/CSV">Exportar relatório (em breve)</button>
+                </div>
+            </section>
+
+            <footer class="footer">Controle de Estoque • Truckvan • Interface operacional responsiva</footer>
+        </div>
+    </main>
 </div>
-
-<div class="container">
-    <nav class="abas" aria-label="Seções do sistema">
-        <button id="aba-estoque" aria-pressed="true" onclick="abrirAba('estoque')">Estoque</button>
-        <button id="aba-relatorio" aria-pressed="false" onclick="abrirAba('relatorio')">Relatório de Movimentações</button>
-    </nav>
-    <section id="painel-estoque" aria-label="Estoque">
-    <div class="dashboard">
-        <div class="card">
-            <h3>Total de Itens</h3>
-            <p id="total-brindes">-</p>
-        </div>
-        <div class="card">
-            <h3>Patrimônio Armazenado</h3>
-            <p id="valor-total">-</p>
-        </div>
-    </div>
-
-    <div class="painel-acoes">
-        <h3>Gerenciar Estoque</h3>
-        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #ddd;">
-            <strong>Novo Brinde:</strong>
-            <input type="text" id="novo-codigo" placeholder="Código (Ex: CAN-01)">
-            <input type="text" id="novo-nome" placeholder="Nome do Brinde">
-            <input type="number" id="novo-qtd" placeholder="Qtd Inicial" style="width: 100px;">
-            <input type="number" id="novo-valor" placeholder="Valor Un (R$)" style="width: 110px;" step="0.01">
-            <button onclick="cadastrarItem()">Cadastrar Produto</button>
-        </div>
-        <div>
-            <strong>Movimentar:</strong>
-            <select id="mov-id-item">
-                <option value="">Selecione o Brinde...</option>
-            </select>
-            <select id="mov-tipo">
-                <option value="ENTRADA">Entrada (Adicionar)</option>
-                <option value="SAIDA">Saída (Retirar)</option>
-            </select>
-            <input type="number" id="mov-qtd" placeholder="Quantidade" style="width: 120px;">
-            <input type="text" id="mov-observacao" maxlength="500" placeholder="Observação (opcional)" aria-label="Observação da movimentação">
-            <button onclick="registrarMovimentacao()">Confirmar Movimentação</button>
-        </div>
-    </div>
-
-    <h2>Inventário Atual</h2>
-    <div class="tabela-responsiva"><table>
-        <thead>
-        <tr>
-            <th>Código</th>
-            <th>Nome do Brinde</th>
-            <th>Em Estoque</th>
-            <th>Valor Unitário</th>
-            <th>Ações</th>
-        </tr>
-        </thead>
-        <tbody id="tabela-itens">
-        <tr><td colspan="5" style="text-align:center;">Verificando credenciais...</td></tr>
-        </tbody>
-    </table></div>
-    </section>
-
-    <section id="painel-relatorio" aria-labelledby="titulo-relatorio" hidden>
-        <h2 id="titulo-relatorio">Relatório de Movimentações</h2>
-        <p>Novos registros usam o horário de Brasília. O responsável é identificado pelo login.</p>
-        <form id="form-filtros" class="painel-acoes filtros">
-            <label>Data inicial<input type="date" id="filtro-inicio"></label>
-            <label>Data final<input type="date" id="filtro-fim"></label>
-            <label>Responsável<select id="filtro-responsavel"><option value="">Todos</option></select></label>
-            <label>Tipo<select id="filtro-tipo"><option value="">Todos</option><option value="ENTRADA">ENTRADA</option><option value="SAIDA">SAÍDA</option></select></label>
-            <label>Produto/item<select id="filtro-item"><option value="">Todos</option></select></label>
-            <button type="submit">Filtrar</button>
-            <button type="button" onclick="limparFiltros()">Limpar filtros</button>
-        </form>
-        <p id="status-relatorio" role="status" aria-live="polite"></p>
-        <p style="font-size:13px; color:#666;">Role a tabela para o lado para consultar todas as colunas.</p>
-        <div class="tabela-responsiva">
-            <table aria-label="Movimentações de estoque">
-                <thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Tipo</th><th>Produto/item</th><th>Quantidade</th><th>Responsável / login</th><th>Observação</th><th>Estoque anterior</th><th>Estoque posterior</th></tr></thead>
-                <tbody id="tabela-movimentacoes"></tbody>
-            </table>
-        </div>
-        <div class="paginacao">
-            <button id="pagina-anterior" onclick="consultarRelatorio(paginaRelatorio - 1)" disabled>Anterior</button>
-            <span id="pagina-info"></span>
-            <button id="pagina-proxima" onclick="consultarRelatorio(paginaRelatorio + 1)" disabled>Próxima</button>
-        </div>
-        <p>Registros antigos podem não conter responsável ou saldos. Esses valores não são estimados.</p>
-        <button disabled title="Evolução futura: PDF e Excel/CSV">Exportar relatório (em breve)</button>
-    </section>
-
-    <div style="text-align: center; margin-top: 40px; padding: 20px; color: #666;">
-        <hr style="border: 0; border-top: 1px solid #ddd; margin-bottom: 20px;">
-        <p style="font-size: 14px;">Controle de Estoque - Truckvan</p>
-        <div id="area-autenticacao"></div>
-    </div>
-</div>
-
 
 <script>
     let paginaRelatorio = 0;
