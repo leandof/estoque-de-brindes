@@ -27,6 +27,18 @@ public class SecurityConfigurations {
     ) throws Exception {
 
         return http
+                .cors(org.springframework.security.config.Customizer.withDefaults())
+                .exceptionHandling(errors -> errors
+                    .authenticationEntryPoint((request, response, exception) -> {
+                        response.setStatus(401);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"mensagem\":\"Sessão ausente, inválida ou expirada. Faça login novamente.\"}");
+                    })
+                    .accessDeniedHandler((request, response, exception) -> {
+                        response.setStatus(403);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"mensagem\":\"Você não tem permissão para esta operação.\"}");
+                    }))
 
                 /*
                  * Nossa aplicação usa JWT.

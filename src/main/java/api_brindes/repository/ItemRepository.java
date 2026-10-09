@@ -17,8 +17,10 @@ public interface ItemRepository extends JpaRepository<Item, Integer> {
 
     // Serializa alterações do mesmo item durante a transação.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select i from Item i where i.id = :id")
+    @Query("select i from Item i where i.id = :id and i.ativo = true")
     Optional<Item> findByIdForUpdate(@Param("id") Integer id);
+
+    List<Item> findByAtivoTrueOrderByNomeAsc();
 
     List<Item> findByNomeContainingIgnoreCase(String nome);
 

@@ -11,6 +11,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<?> autenticacao(Exception e) {
+        return ResponseEntity.status(401).body(Map.of("mensagem", "Usuário ou senha inválidos."));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> regra(IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(Map.of("mensagem", e.getMessage()));

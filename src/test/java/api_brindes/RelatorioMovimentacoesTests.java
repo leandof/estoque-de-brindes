@@ -158,11 +158,19 @@ class RelatorioMovimentacoesTests {
         assertThat(primeira.get("totalPaginas").asInt()).isEqualTo(2);
         assertThat(primeira.get("conteudo").get(0).get("id").asInt()).isGreaterThan(segunda.get("conteudo").get(0).get("id").asInt());
     }
-    @Test void exclusaoPreservaHistoricoESaldosAntigos() throws Exception {
+    @Test void exclusaoLogicaRetiraDoInventarioEPreservaHistorico() throws Exception {
         registrar(tokenJoao, "SAIDA", 20).andExpect(status().isCreated());
         registrar(tokenMaria, "ENTRADA", 50).andExpect(status().isCreated());
         mvc.perform(delete("/itens/" + caneca.getId()).header("Authorization", "Bearer " + tokenJoao))
-                .andExpect(status().isConflict());
+                .andExpect(status().isNoContent());
+        assertThat(itens.findById(caneca.getId()).orElseThrow().isAtivo()).isFalse();
+        mvc.perform(get("/itens").header("Authorization", "Bearer " + tokenJoao))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/itens/relatorio").header("Authorization", "Bearer " + tokenJoao))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalDeBrindesCadastrados").value(0));
+        mvc.perform(get("/itens/historico").header("Authorization", "Bearer " + tokenJoao))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].ativo").value(false));
+        registrar(tokenJoao, "ENTRADA", 1).andExpect(status().isNotFound());
         assertThat(movimentos.count()).isEqualTo(2);
         var antiga = relatorio("").get("conteudo").get(1);
         assertThat(antiga.get("estoqueAnterior").asInt()).isEqualTo(100);
@@ -213,4 +221,46 @@ class RelatorioMovimentacoesTests {
             assertThat(movimentos.count()).isEqualTo(1);
         } finally { pool.shutdownNow(); }
     }
+    @Test void logoPublicaEApiSemTokenRetorna401() throws Exception {
+        mvc.perform(get("/assets/truckvan-logo.jpeg")).andExpect(status().isOk());
+        mvc.perform(get("/itens")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"login\":\"joao\",\"senha\":\"incorreta\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test void somaQuantidadesSemOverflowDeInteger() throws Exception {
+        caneca.setQuantidade(Integer.MAX_VALUE); itens.save(caneca);
+        itens.save(new Item("MAX-02", "Outro estoque", Integer.MAX_VALUE, 0.1));
+        mvc.perform(get("/itens/relatorio").header("Authorization", "Bearer " + tokenJoao))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalDeBrindesCadastrados").value(4294967294L));
+    }
+
+    @Test void rejeitaPrecoComMaisDeDuasCasasOuAcimaDoLimite() throws Exception {
+        for (String valor : List.of("1.234", "1000000000", "-1")) {
+            mvc.perform(put("/itens/" + caneca.getId()).header("Authorization", "Bearer " + tokenJoao)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"valor\":" + valor + "}"))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(itens.findById(caneca.getId()).orElseThrow().getValor()).isEqualTo(25.0);
+    }
+
+    @Test void itemExcluidoNaoAceitaEdicaoNemPerdeSaldoHistorico() throws Exception {
+        mvc.perform(delete("/itens/" + caneca.getId()).header("Authorization", "Bearer " + tokenJoao))
+                .andExpect(status().isNoContent());
+        mvc.perform(put("/itens/" + caneca.getId()).header("Authorization", "Bearer " + tokenJoao)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"valor\":10}"))
+                .andExpect(status().isNotFound());
+        assertThat(itens.findById(caneca.getId()).orElseThrow().getQuantidade()).isEqualTo(100);
+    }
+
+    @Test void corsPreflightAceitaOrigemConfigurada() throws Exception {
+        mvc.perform(options("/itens").header("Origin", "http://localhost:8080")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "authorization,content-type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:8080"));
+    }
+
 }

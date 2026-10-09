@@ -22,6 +22,13 @@ public class Item {
     @Column(nullable = false)
     private Double valor;
 
+    // Exclusão lógica: preserva o relacionamento com as movimentações.
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean ativo = true;
+
+    public boolean isAtivo() { return ativo; }
+    public void setAtivo(boolean ativo) { this.ativo = ativo; }
+
     // Construtor vazio obrigatório para o Spring (JPA)
     public Item() {}
 

@@ -29,7 +29,12 @@ public class ItemController {
 
     @GetMapping
     public List<Item> listarTodos() {
-        return itemRepository.findAll();
+        return itemRepository.findByAtivoTrueOrderByNomeAsc();
+    }
+
+    @GetMapping("/historico")
+    public List<Item> listarParaHistorico() {
+        return itemRepository.findAll(org.springframework.data.domain.Sort.by("nome"));
     }
 
     @PostMapping
@@ -39,22 +44,24 @@ public class ItemController {
 
     @GetMapping("/relatorio")
     public ResponseEntity<Map<String, Object>> obterRelatorio() {
-        List<Item> itens = itemRepository.findAll();
+        List<Item> itens = itemRepository.findByAtivoTrueOrderByNomeAsc();
 
-        int quantidadeTotal = 0;
-        double patrimonioTotal = 0.0;
+        long quantidadeTotal = 0;
+        java.math.BigDecimal patrimonioTotal = java.math.BigDecimal.ZERO;
 
         // Faz a matemática real lendo o banco de dados
         for (Item item : itens) {
             quantidadeTotal += item.getQuantidade();
-            patrimonioTotal += (item.getQuantidade() * item.getValor());
+            patrimonioTotal = patrimonioTotal.add(java.math.BigDecimal.valueOf(item.getValor())
+                    .multiply(java.math.BigDecimal.valueOf(item.getQuantidade())));
         }
 
         Map<String, Object> relatorio = new HashMap<>();
 
         // A MÁGICA ACONTECE AQUI: Nomes idênticos ao seu HTML!
         relatorio.put("totalDeBrindesCadastrados", quantidadeTotal);
-        relatorio.put("valorTotalArmazenado", patrimonioTotal);
+        relatorio.put("valorTotalArmazenado", patrimonioTotal.setScale(2, java.math.RoundingMode.HALF_UP));
+        relatorio.put("totalTiposDeBrindes", itens.size());
 
         return ResponseEntity.ok(relatorio);
     }

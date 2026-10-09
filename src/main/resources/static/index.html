@@ -3,1001 +3,288 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#a71920">
-    <title>Truckvan - Controle de Estoque</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23a71920'/><text x='50' y='71' font-size='66' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'>T</text></svg>">
-    <style>
-        :root {
-            --truckvan-red: #b32025;
-            --truckvan-red-dark: #84151a;
-            --truckvan-red-deep: #641014;
-            --ink: #1b1e23;
-            --ink-2: #2b3038;
-            --muted: #6c7480;
-            --line: #e5e8ec;
-            --surface: #ffffff;
-            --surface-2: #f7f8fa;
-            --page: #eef1f4;
-            --success: #18794e;
-            --warning: #b54708;
-            --shadow: 0 20px 50px rgba(20, 25, 32, .10);
-            --radius-xl: 24px;
-            --radius-lg: 18px;
-            --radius-md: 12px;
-        }
-
-        * { box-sizing: border-box; }
-        html { min-width: 0; background: var(--page); }
-        body {
-            margin: 0;
-            min-width: 0;
-            color: var(--ink);
-            background:
-                radial-gradient(circle at 100% 0%, rgba(179,32,37,.10), transparent 28rem),
-                linear-gradient(135deg, #f6f7f9 0%, #edf0f3 100%);
-            font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            min-height: 100vh;
-        }
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            opacity: .42;
-            background-image: linear-gradient(90deg, transparent 49.75%, rgba(255,255,255,.85) 50%, transparent 50.25%);
-            background-size: 230px 100%;
-            mask-image: linear-gradient(to bottom, transparent 0, #000 26%, #000 74%, transparent 100%);
-        }
-
-        button, input, select { font: inherit; }
-        button { -webkit-tap-highlight-color: transparent; }
-        [hidden] { display: none !important; }
-
-        .app-shell {
-            position: relative;
-            z-index: 1;
-            display: grid;
-            grid-template-columns: 270px minmax(0, 1fr);
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            padding: 22px 18px;
-            background:
-                linear-gradient(160deg, rgba(255,255,255,.04), transparent 42%),
-                linear-gradient(180deg, #24282f 0%, #171a1f 100%);
-            color: #fff;
-            border-right: 1px solid rgba(255,255,255,.06);
-            overflow: hidden;
-        }
-        .sidebar::after {
-            content: "";
-            position: absolute;
-            width: 300px;
-            height: 120px;
-            border: 18px solid rgba(179,32,37,.18);
-            border-left: 0;
-            border-radius: 0 90px 90px 0;
-            transform: rotate(-18deg);
-            left: -110px;
-            bottom: 42px;
-            pointer-events: none;
-        }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 0;
-            padding: 8px 8px 22px;
-            border-bottom: 1px solid rgba(255,255,255,.10);
-            margin-bottom: 22px;
-        }
-        .brand-logo {
-            width: 54px;
-            height: 54px;
-            flex: 0 0 54px;
-            object-fit: contain;
-            background: #fff;
-            border-radius: 13px;
-            padding: 5px;
-            box-shadow: 0 10px 25px rgba(0,0,0,.28);
-        }
-        .brand-copy { min-width: 0; }
-        .brand-name {
-            margin: 0;
-            font-weight: 900;
-            letter-spacing: .10em;
-            font-size: 1.08rem;
-        }
-        .brand-subtitle {
-            margin: 5px 0 0;
-            font-size: .76rem;
-            color: #b9c0c9;
-            line-height: 1.35;
-        }
-
-        .nav-label {
-            margin: 0 10px 10px;
-            color: #8e97a3;
-            font-size: .70rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: .14em;
-        }
-        .abas { display: grid; gap: 8px; }
-        .abas button {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            min-height: 48px;
-            padding: 0 13px;
-            border: 1px solid transparent;
-            border-radius: 12px;
-            color: #d8dde3;
-            background: transparent;
-            text-align: left;
-            font-weight: 700;
-            cursor: pointer;
-            transition: .2s ease;
-        }
-        .abas button svg { width: 20px; height: 20px; flex: 0 0 auto; }
-        .abas button:hover { background: rgba(255,255,255,.07); color: #fff; }
-        .abas button[aria-pressed="true"] {
-            background: linear-gradient(135deg, var(--truckvan-red), #95191e);
-            color: #fff;
-            box-shadow: 0 10px 24px rgba(179,32,37,.28);
-        }
-        .abas button[aria-pressed="false"] { background: transparent; }
-
-        .sidebar-bottom {
-            position: absolute;
-            z-index: 1;
-            left: 26px;
-            right: 26px;
-            bottom: 24px;
-            font-size: .74rem;
-            color: #8f98a4;
-            line-height: 1.45;
-        }
-        .sidebar-bottom strong { color: #d9dde2; }
-
-        .main { min-width: 0; }
-        .topbar {
-            min-height: 82px;
-            padding: 16px clamp(18px, 4vw, 44px);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 18px;
-            border-bottom: 1px solid rgba(26,30,35,.08);
-            background: rgba(255,255,255,.72);
-            backdrop-filter: blur(14px);
-            position: sticky;
-            top: 0;
-            z-index: 20;
-        }
-        .topbar-title { min-width: 0; }
-        .topbar-eyebrow {
-            margin: 0 0 4px;
-            color: var(--truckvan-red);
-            font-size: .72rem;
-            font-weight: 900;
-            letter-spacing: .14em;
-            text-transform: uppercase;
-        }
-        .topbar h1 {
-            margin: 0;
-            font-size: clamp(1.15rem, 2vw, 1.45rem);
-            line-height: 1.2;
-        }
-        #area-autenticacao { flex: 0 0 auto; }
-        #area-autenticacao button {
-            margin: 0;
-            background: #fff;
-            color: var(--ink);
-            border: 1px solid var(--line);
-            box-shadow: 0 7px 20px rgba(20,25,32,.06);
-        }
-        #area-autenticacao button:hover {
-            color: var(--truckvan-red);
-            border-color: rgba(179,32,37,.35);
-            background: #fff;
-        }
-
-        .content {
-            width: min(1450px, 100%);
-            margin: 0 auto;
-            padding: clamp(22px, 4vw, 44px);
-        }
-        .page-heading {
-            display: flex;
-            align-items: end;
-            justify-content: space-between;
-            gap: 22px;
-            margin-bottom: 24px;
-        }
-        .page-heading h2 {
-            margin: 0;
-            font-size: clamp(1.7rem, 3.2vw, 2.4rem);
-            line-height: 1.1;
-            letter-spacing: -.04em;
-        }
-        .page-heading p {
-            max-width: 720px;
-            margin: 9px 0 0;
-            color: var(--muted);
-            line-height: 1.55;
-        }
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 12px;
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 999px;
-            color: #4d5560;
-            font-size: .78rem;
-            font-weight: 800;
-            box-shadow: 0 8px 24px rgba(20,25,32,.05);
-            white-space: nowrap;
-        }
-        .status-pill::before {
-            content: "";
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #1f9d63;
-            box-shadow: 0 0 0 4px rgba(31,157,99,.12);
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
-            margin-bottom: 18px;
-        }
-        .card {
-            position: relative;
-            overflow: hidden;
-            min-height: 154px;
-            padding: 25px;
-            border-radius: var(--radius-xl);
-            color: #fff;
-            box-shadow: var(--shadow);
-        }
-        .card::after {
-            content: "";
-            position: absolute;
-            width: 160px;
-            height: 58px;
-            right: -35px;
-            bottom: 18px;
-            border: 10px solid rgba(255,255,255,.11);
-            border-left-width: 42px;
-            border-radius: 8px 34px 10px 8px;
-            transform: skewX(-12deg);
-        }
-        .card-primary { background: linear-gradient(135deg, #bd262c 0%, #8f151a 100%); }
-        .card-dark { background: linear-gradient(135deg, #343a43 0%, #1c2026 100%); }
-        .card h3 {
-            margin: 0;
-            font-size: .73rem;
-            font-weight: 900;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-            opacity: .72;
-        }
-        .card p {
-            position: relative;
-            z-index: 1;
-            margin: 12px 0 0;
-            font-size: clamp(2rem, 4vw, 3rem);
-            line-height: 1;
-            font-weight: 900;
-            letter-spacing: -.05em;
-        }
-        .card small {
-            display: block;
-            margin-top: 14px;
-            color: rgba(255,255,255,.70);
-            font-size: .78rem;
-        }
-
-        .panel {
-            background: rgba(255,255,255,.94);
-            border: 1px solid rgba(220,224,230,.85);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow);
-        }
-        .panel + .panel { margin-top: 18px; }
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 22px 24px;
-            border-bottom: 1px solid var(--line);
-        }
-        .panel-header h3, .panel-header h2 { margin: 0; font-size: 1rem; }
-        .panel-header p { margin: 5px 0 0; color: var(--muted); font-size: .82rem; }
-        .panel-body { padding: 24px; }
-
-        .painel-acoes {
-            background: rgba(255,255,255,.94);
-            border: 1px solid rgba(220,224,230,.85);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow);
-            margin-bottom: 18px;
-            overflow: hidden;
-        }
-        .painel-acoes > h3 {
-            margin: 0;
-            padding: 22px 24px 15px;
-            font-size: 1rem;
-        }
-        .action-block { padding: 0 24px 24px; }
-        .action-block + .action-block {
-            padding-top: 22px;
-            border-top: 1px solid var(--line);
-        }
-        .action-title {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            margin-bottom: 13px;
-            color: #353b43;
-            font-size: .84rem;
-            font-weight: 900;
-        }
-        .action-title::before {
-            content: "";
-            width: 4px;
-            height: 18px;
-            border-radius: 999px;
-            background: var(--truckvan-red);
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(12, minmax(0, 1fr));
-            gap: 12px;
-            align-items: center;
-        }
-        .span-2 { grid-column: span 2; }
-        .span-3 { grid-column: span 3; }
-        .span-4 { grid-column: span 4; }
-        .span-5 { grid-column: span 5; }
-        .span-6 { grid-column: span 6; }
-        .span-12 { grid-column: span 12; }
-
-        input, select {
-            width: 100%;
-            min-width: 0;
-            height: 44px;
-            padding: 0 12px;
-            color: var(--ink);
-            background: #fbfcfd;
-            border: 1px solid #dce1e6;
-            border-radius: 11px;
-            outline: none;
-            transition: border-color .18s, box-shadow .18s, background .18s;
-        }
-        input:focus, select:focus {
-            background: #fff;
-            border-color: rgba(179,32,37,.65);
-            box-shadow: 0 0 0 4px rgba(179,32,37,.10);
-        }
-        input::placeholder { color: #9aa2ad; }
-
-        button {
-            min-height: 44px;
-            padding: 0 16px;
-            border: 0;
-            border-radius: 11px;
-            color: #fff;
-            background: linear-gradient(135deg, var(--truckvan-red), #99191e);
-            font-size: .84rem;
-            font-weight: 850;
-            cursor: pointer;
-            transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
-            box-shadow: 0 8px 20px rgba(179,32,37,.18);
-        }
-        button:hover:not(:disabled) {
-            transform: translateY(-1px);
-            background: linear-gradient(135deg, #c72b31, var(--truckvan-red-dark));
-            box-shadow: 0 12px 26px rgba(179,32,37,.24);
-        }
-        button:active:not(:disabled) { transform: translateY(0); }
-        button:disabled { opacity: .46; cursor: not-allowed; box-shadow: none; }
-        .button-secondary {
-            color: #3e444c;
-            background: #fff;
-            border: 1px solid var(--line);
-            box-shadow: none;
-        }
-        .button-secondary:hover:not(:disabled) {
-            color: var(--truckvan-red);
-            background: #fff;
-            border-color: rgba(179,32,37,.32);
-            box-shadow: 0 9px 22px rgba(30,34,40,.06);
-        }
-
-        .table-panel {
-            background: #fff;
-            border: 1px solid rgba(220,224,230,.85);
-            border-radius: var(--radius-xl);
-            overflow: hidden;
-            box-shadow: var(--shadow);
-        }
-        .table-heading {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            padding: 21px 24px;
-            border-bottom: 1px solid var(--line);
-        }
-        .table-heading h2 { margin: 0; font-size: 1rem; }
-        .table-heading span { color: var(--muted); font-size: .76rem; }
-        .tabela-responsiva {
-            width: 100%;
-            max-width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        table { width: 100%; border-collapse: collapse; min-width: 720px; }
-        th, td {
-            padding: 15px 18px;
-            border-bottom: 1px solid #edf0f2;
-            text-align: left;
-            white-space: nowrap;
-            font-size: .84rem;
-        }
-        th {
-            color: #747d88;
-            background: #fafbfc;
-            font-size: .68rem;
-            font-weight: 900;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-        }
-        tbody tr { transition: background .16s ease; }
-        tbody tr:hover { background: #fafbfc; }
-        tbody tr:last-child td { border-bottom: 0; }
-        td button {
-            min-height: 34px;
-            padding: 0 11px;
-            margin-right: 6px;
-            font-size: .75rem;
-            border-radius: 9px;
-            box-shadow: none;
-        }
-        td button + button {
-            color: var(--truckvan-red);
-            background: #fff;
-            border: 1px solid rgba(179,32,37,.22);
-        }
-        td button + button:hover:not(:disabled) { color: #fff; }
-        .estoque-baixo { color: #d92d20; font-weight: 900; }
-        .tipo-entrada { color: var(--success); font-weight: 900; }
-        .tipo-saida { color: var(--truckvan-red); font-weight: 900; }
-        .erro { color: var(--truckvan-red); }
-
-        .report-intro {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 20px;
-            align-items: end;
-            margin-bottom: 20px;
-        }
-        .report-intro h2 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.3rem); letter-spacing: -.04em; }
-        .report-intro p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
-        .filtros {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(140px, 1fr)) auto auto;
-            gap: 12px;
-            align-items: end;
-            padding: 22px;
-        }
-        .filtros label {
-            display: grid;
-            gap: 7px;
-            color: #555e69;
-            font-size: .73rem;
-            font-weight: 800;
-        }
-        .filtros button[type="button"] {
-            color: #414850;
-            background: #fff;
-            border: 1px solid var(--line);
-            box-shadow: none;
-        }
-        .filtros button[type="button"]:hover:not(:disabled) {
-            color: var(--truckvan-red);
-            background: #fff;
-            border-color: rgba(179,32,37,.35);
-        }
-        #status-relatorio {
-            min-height: 20px;
-            margin: 14px 2px 10px;
-            color: #525a64;
-            font-size: .82rem;
-            font-weight: 700;
-        }
-        .table-helper { margin: 0 2px 10px; color: var(--muted); font-size: .74rem; }
-        #painel-relatorio table { min-width: 1180px; }
-        .paginacao {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 10px;
-            padding: 18px 4px 0;
-            flex-wrap: wrap;
-        }
-        .paginacao button { min-height: 38px; padding: 0 13px; box-shadow: none; }
-        #pagina-info { color: var(--muted); font-size: .78rem; font-weight: 800; }
-        .report-note {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            margin-top: 18px;
-            padding: 16px 18px;
-            color: #656d77;
-            background: rgba(255,255,255,.64);
-            border: 1px solid rgba(220,224,230,.85);
-            border-radius: 14px;
-            font-size: .76rem;
-        }
-        .report-note p { margin: 0; line-height: 1.5; }
-        .report-note button { flex: 0 0 auto; }
-
-        .footer {
-            padding: 26px 4px 4px;
-            text-align: center;
-            color: #89919a;
-            font-size: .72rem;
-        }
-
-        @media (max-width: 1180px) {
-            .filtros { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
-            .form-grid .span-2, .form-grid .span-3, .form-grid .span-4 { grid-column: span 6; }
-            .form-grid .span-5, .form-grid .span-6 { grid-column: span 6; }
-        }
-        @media (max-width: 900px) {
-            .app-shell { grid-template-columns: 1fr; }
-            .sidebar {
-                position: sticky;
-                z-index: 30;
-                height: auto;
-                min-height: auto;
-                padding: 11px 14px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                border-right: 0;
-                border-bottom: 1px solid rgba(255,255,255,.08);
-            }
-            .sidebar::after, .sidebar-bottom, .nav-label { display: none; }
-            .brand { padding: 0; margin: 0; border: 0; flex: 0 0 auto; }
-            .brand-logo { width: 42px; height: 42px; flex-basis: 42px; border-radius: 10px; }
-            .brand-subtitle { display: none; }
-            .brand-name { font-size: .92rem; }
-            .abas { margin-left: auto; display: flex; min-width: 0; }
-            .abas button { width: auto; min-height: 40px; padding: 0 11px; font-size: .76rem; }
-            .abas button svg { width: 18px; height: 18px; }
-            .topbar { top: 65px; min-height: 70px; }
-            .report-intro { grid-template-columns: 1fr; align-items: start; }
-        }
-        @media (max-width: 700px) {
-            .content { padding: 18px 14px 28px; }
-            .topbar { padding: 12px 14px; }
-            .topbar-eyebrow { display: none; }
-            .topbar h1 { font-size: 1rem; }
-            #area-autenticacao button { min-height: 38px; padding: 0 10px; font-size: .74rem; }
-            .page-heading { align-items: start; flex-direction: column; gap: 12px; }
-            .status-pill { font-size: .72rem; }
-            .dashboard { grid-template-columns: 1fr; gap: 12px; }
-            .card { min-height: 132px; padding: 21px; }
-            .painel-acoes > h3 { padding: 19px 18px 12px; }
-            .action-block { padding: 0 18px 20px; }
-            .form-grid { grid-template-columns: 1fr; }
-            .form-grid > * { grid-column: 1 / -1 !important; }
-            .filtros { grid-template-columns: 1fr; padding: 18px; }
-            .filtros label, .filtros input, .filtros select, .filtros button { width: 100%; }
-            .table-heading { padding: 18px; }
-            th, td { padding: 13px 15px; }
-            .report-note { align-items: stretch; flex-direction: column; }
-            .report-note button { width: 100%; }
-        }
-        @media (max-width: 500px) {
-            .sidebar { gap: 8px; }
-            .brand-copy { display: none; }
-            .abas { flex: 1 1 auto; justify-content: flex-end; }
-            .abas button { flex: 1 1 auto; justify-content: center; padding: 0 8px; }
-            .abas button span { display: none; }
-            .topbar { top: 64px; }
-            .page-heading h2, .report-intro h2 { font-size: 1.65rem; }
-        }
-    </style>
+    <meta name="theme-color" content="#cf2027">
+    <title>Estoque de brindes | Truckvan</title>
+    <link rel="stylesheet" href="/css/index.css">
+    <script src="/js/index.js" defer>
+</script>
 </head>
 <body>
+<a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 <div class="app-shell">
     <aside class="sidebar">
-        <div class="brand">
-            <img class="brand-logo" src="logo-truckvan.png" alt="Logo Truckvan">
-            <div class="brand-copy">
-                <p class="brand-name">TRUCKVAN</p>
-                <p class="brand-subtitle">Controle de estoque<br>e movimentações</p>
-            </div>
-        </div>
-
-        <p class="nav-label">Navegação</p>
+        <a class="brand" href="/" aria-label="Truckvan — início">
+<img src="/assets/truckvan-logo.jpeg" alt="Truckvan">
+<span>GESTÃO DE BRINDES</span>
+</a>
+        <p class="nav-label">ÁREA DE TRABALHO</p>
         <nav class="abas" aria-label="Seções do sistema">
             <button id="aba-estoque" aria-pressed="true" onclick="abrirAba('estoque')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4.5 7.7 7.5 4.2 7.5-4.2M12 12v9"/></svg>
-                <span>Estoque</span>
-            </button>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+<path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/>
+<path d="m4.5 7.7 7.5 4.2 7.5-4.2M12 12v9"/>
+</svg>
+<span>Estoque</span>
+</button>
             <button id="aba-relatorio" aria-pressed="false" onclick="abrirAba('relatorio')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-                <span>Relatório de Movimentações</span>
-            </button>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+<path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/>
+</svg>
+<span>Relatório de Movimentações</span>
+</button>
         </nav>
-
         <div class="sidebar-bottom">
-            <strong>Operação em movimento.</strong><br>
-            Interface inspirada em transporte, carretas e unidades móveis Truckvan.
-        </div>
+<span class="brand-rule">
+</span>
+<strong>Cada movimento conta.</strong>
+<p>Organização e rastreabilidade para a sua operação.</p>
+<small>TRUCKVAN • CONTROLE INTERNO</small>
+</div>
     </aside>
-
-    <main class="main">
+    <main class="main" id="conteudo">
         <header class="topbar">
-            <div class="topbar-title">
-                <p class="topbar-eyebrow">Truckvan • Operações</p>
-                <h1>Sistema de Controle de Estoque</h1>
-            </div>
-            <div id="area-autenticacao" aria-label="Área de autenticação"></div>
-        </header>
-
+<div>
+<span class="eyebrow">OPERAÇÕES / BRINDES</span>
+<p>Central de estoque</p>
+</div>
+<div id="area-autenticacao" aria-label="Área de autenticação">
+</div>
+</header>
         <div class="content">
-            <section id="painel-estoque" aria-label="Estoque">
+            <div id="notificacao" role="status" aria-live="polite" hidden>
+</div>
+            <section id="painel-estoque" aria-labelledby="titulo-estoque">
                 <div class="page-heading">
-                    <div>
-                        <h2>Visão geral do estoque</h2>
-                        <p>Acompanhe os brindes, o patrimônio armazenado e registre entradas e saídas em uma única central operacional.</p>
-                    </div>
-                    <span class="status-pill">Sistema operacional</span>
-                </div>
-
+<div>
+<p class="eyebrow">CONTROLE OPERACIONAL</p>
+<h1 id="titulo-estoque">Tudo sob controle.</h1>
+<p>Seu inventário, seus números e o próximo movimento.</p>
+</div>
+<span id="estado-dados" class="status-pill">Aguardando dados</span>
+</div>
                 <div class="dashboard">
                     <article class="card card-primary">
-                        <h3>Total de Itens</h3>
-                        <p id="total-brindes">-</p>
-                        <small>Quantidade consolidada em estoque</small>
-                    </article>
-                    <article class="card card-dark">
-                        <h3>Patrimônio Armazenado</h3>
-                        <p id="valor-total">-</p>
-                        <small>Valor estimado dos itens armazenados</small>
-                    </article>
+<h2>Unidades em estoque</h2>
+<p id="total-brindes">—</p>
+<small>Soma das quantidades disponíveis</small>
+</article>
+                    <article class="card">
+<h2>Valor em estoque</h2>
+<p id="valor-total">—</p>
+<small>Quantidade × valor unitário atual</small>
+</article>
+                    <article class="card">
+<h2>Produtos cadastrados</h2>
+<p id="total-produtos">—</p>
+<small>Tipos de brindes no inventário</small>
+</article>
+                    <article class="card">
+<h2>Atenção ao estoque</h2>
+<p id="total-baixos">—</p>
+<small>Produtos com menos de 20 unidades</small>
+</article>
                 </div>
-
-                <div class="painel-acoes">
-                    <h3>Central de operações</h3>
-                    <div class="action-block">
-                        <div class="action-title">Novo Brinde</div>
-                        <div class="form-grid">
-                            <input class="span-2" type="text" id="novo-codigo" placeholder="Código (Ex: CAN-01)" aria-label="Código do novo brinde">
-                            <input class="span-4" type="text" id="novo-nome" placeholder="Nome do Brinde" aria-label="Nome do novo brinde">
-                            <input class="span-2" type="number" id="novo-qtd" placeholder="Qtd Inicial" aria-label="Quantidade inicial">
-                            <input class="span-2" type="number" id="novo-valor" placeholder="Valor Un (R$)" step="0.01" aria-label="Valor unitário">
-                            <button class="span-2" onclick="cadastrarItem()">Cadastrar Produto</button>
-                        </div>
-                    </div>
-                    <div class="action-block">
-                        <div class="action-title">Movimentar estoque</div>
-                        <div class="form-grid">
-                            <select class="span-4" id="mov-id-item" aria-label="Brinde para movimentação">
-                                <option value="">Selecione o Brinde...</option>
-                            </select>
-                            <select class="span-2" id="mov-tipo" aria-label="Tipo de movimentação">
-                                <option value="ENTRADA">Entrada (Adicionar)</option>
-                                <option value="SAIDA">Saída (Retirar)</option>
-                            </select>
-                            <input class="span-2" type="number" id="mov-qtd" placeholder="Quantidade" aria-label="Quantidade da movimentação">
-                            <input class="span-2" type="text" id="mov-observacao" maxlength="500" placeholder="Observação (opcional)" aria-label="Observação da movimentação">
-                            <button class="span-2" onclick="registrarMovimentacao()">Confirmar Movimentação</button>
-                        </div>
-                    </div>
-                </div>
-
+                <div class="workspace-heading">
+<div>
+<h2>Inventário</h2>
+<p>Consulte os produtos e mantenha os saldos atualizados.</p>
+</div>
+<div class="action-buttons">
+<button class="button-secondary" data-mutacao onclick="abrirDialogo('dialogo-movimento')">↗ Movimentar estoque</button>
+<button data-mutacao onclick="abrirDialogo('dialogo-cadastro')">+ Novo brinde</button>
+</div>
+</div>
                 <div class="table-panel">
-                    <div class="table-heading">
-                        <h2>Inventário Atual</h2>
-                        <span>Estoque em tempo real</span>
-                    </div>
+                    <div class="toolbar">
+<label class="search-field">
+<span>Buscar no inventário</span>
+<input id="busca-itens" type="search" placeholder="Nome ou código do brinde" autocomplete="off">
+</label>
+<label>
+<span>Disponibilidade</span>
+<select id="filtro-estoque">
+<option value="todos">Todos os produtos</option>
+<option value="baixo">Abaixo de 20 unidades</option>
+<option value="zerado">Sem estoque</option>
+</select>
+</label>
+<button class="button-secondary" onclick="carregarDados()">Atualizar</button>
+</div>
                     <div class="tabela-responsiva">
-                        <table aria-label="Inventário atual">
-                            <thead>
-                            <tr>
-                                <th>Código</th>
-                                <th>Nome do Brinde</th>
-                                <th>Em Estoque</th>
-                                <th>Valor Unitário</th>
-                                <th>Ações</th>
-                            </tr>
-                            </thead>
-                            <tbody id="tabela-itens">
-                            <tr><td colspan="5" style="text-align:center;">Verificando credenciais...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+<table aria-label="Inventário atual">
+<thead>
+<tr>
+<th>Código</th>
+<th>Brinde</th>
+<th>Disponível</th>
+<th>Valor unitário</th>
+<th>Ações</th>
+</tr>
+</thead>
+<tbody id="tabela-itens">
+<tr>
+<td colspan="5">Carregando inventário...</td>
+</tr>
+</tbody>
+</table>
+</div>
+                    <div class="table-footer">
+<span id="contagem-itens">Aguardando dados</span>
+<span>Exclusões preservam o histórico de movimentações.</span>
+</div>
                 </div>
             </section>
-
             <section id="painel-relatorio" aria-labelledby="titulo-relatorio" hidden>
-                <div class="report-intro">
-                    <div>
-                        <h2 id="titulo-relatorio">Relatório de Movimentações</h2>
-                        <p>Consulte entradas e saídas por período, responsável, tipo e produto. Novos registros usam o horário de Brasília e o responsável é identificado pelo login.</p>
-                    </div>
-                    <span class="status-pill">Rastreabilidade ativa</span>
-                </div>
-
-                <form id="form-filtros" class="painel-acoes filtros">
-                    <label>Data inicial<input type="date" id="filtro-inicio"></label>
-                    <label>Data final<input type="date" id="filtro-fim"></label>
-                    <label>Responsável<select id="filtro-responsavel"><option value="">Todos</option></select></label>
-                    <label>Tipo<select id="filtro-tipo"><option value="">Todos</option><option value="ENTRADA">ENTRADA</option><option value="SAIDA">SAÍDA</option></select></label>
-                    <label>Produto/item<select id="filtro-item"><option value="">Todos</option></select></label>
+                <div class="page-heading">
+<div>
+<p class="eyebrow">HISTÓRICO OPERACIONAL</p>
+<h1 id="titulo-relatorio">Cada movimento, registrado.</h1>
+<p>Consulte entradas, saídas e responsáveis. Horários de Brasília.</p>
+</div>
+</div>
+                <form id="form-filtros" class="filtros table-panel">
+                    <label>Data inicial<input type="date" id="filtro-inicio">
+</label>
+<label>Data final<input type="date" id="filtro-fim">
+</label>
+                    <label>Responsável<select id="filtro-responsavel">
+<option value="">Todos</option>
+</select>
+</label>
+                    <label>Tipo<select id="filtro-tipo">
+<option value="">Todos</option>
+<option value="ENTRADA">Entrada</option>
+<option value="SAIDA">Saída</option>
+</select>
+</label>
+                    <label>Produto<select id="filtro-item">
+<option value="">Todos</option>
+</select>
+</label>
                     <button type="submit">Filtrar</button>
-                    <button type="button" onclick="limparFiltros()">Limpar filtros</button>
+<button class="button-secondary" type="button" onclick="limparFiltros()">Limpar filtros</button>
                 </form>
-
-                <p id="status-relatorio" role="status" aria-live="polite"></p>
-                <p class="table-helper">Em telas menores, deslize a tabela horizontalmente para consultar todas as colunas.</p>
-
+                <div class="report-toolbar">
+<p id="status-relatorio" role="status" aria-live="polite">
+</p>
+<button id="exportar-csv" class="button-secondary" onclick="exportarPaginaCSV()" disabled>Baixar página em CSV</button>
+</div>
                 <div class="table-panel">
-                    <div class="table-heading">
-                        <h2>Histórico operacional</h2>
-                        <span>Movimentações registradas</span>
-                    </div>
-                    <div class="tabela-responsiva">
-                        <table aria-label="Movimentações de estoque">
-                            <thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Tipo</th><th>Produto/item</th><th>Quantidade</th><th>Responsável / login</th><th>Observação</th><th>Estoque anterior</th><th>Estoque posterior</th></tr></thead>
-                            <tbody id="tabela-movimentacoes"></tbody>
-                        </table>
-                    </div>
-                </div>
-
+<div class="tabela-responsiva">
+<table aria-label="Movimentações de estoque">
+<thead>
+<tr>
+<th>ID</th>
+<th>Data</th>
+<th>Hora</th>
+<th>Tipo</th>
+<th>Produto</th>
+<th>Quantidade</th>
+<th>Responsável</th>
+<th>Observação</th>
+<th>Saldo anterior</th>
+<th>Saldo posterior</th>
+</tr>
+</thead>
+<tbody id="tabela-movimentacoes">
+</tbody>
+</table>
+</div>
+</div>
                 <div class="paginacao">
-                    <button id="pagina-anterior" onclick="consultarRelatorio(paginaRelatorio - 1)" disabled>Anterior</button>
-                    <span id="pagina-info"></span>
-                    <button id="pagina-proxima" onclick="consultarRelatorio(paginaRelatorio + 1)" disabled>Próxima</button>
-                </div>
-
-                <div class="report-note">
-                    <p>Registros antigos podem não conter responsável ou saldos. Esses valores não são estimados.</p>
-                    <button disabled title="Evolução futura: PDF e Excel/CSV">Exportar relatório (em breve)</button>
-                </div>
+<button id="pagina-anterior" class="button-secondary" onclick="consultarRelatorio(paginaRelatorio - 1)" disabled>Anterior</button>
+<span id="pagina-info">
+</span>
+<button id="pagina-proxima" class="button-secondary" onclick="consultarRelatorio(paginaRelatorio + 1)" disabled>Próxima</button>
+</div>
+                <p class="report-note">O CSV contém somente a página exibida (até 20 registros). Registros antigos podem não conter responsável ou saldos; esses dados não são estimados.</p>
             </section>
-
-            <footer class="footer">Controle de Estoque • Truckvan • Interface operacional responsiva</footer>
+            <footer class="footer">
+<strong>TRUCKVAN</strong>
+<span>Gestão de brindes · Organização em cada detalhe.</span>
+</footer>
         </div>
     </main>
 </div>
-
-<script>
-    let paginaRelatorio = 0;
-    let filtrosAplicados = new URLSearchParams();
-    let consultaAtual = 0;
-    let operacaoEmAndamento = false;
-    const el = id => document.getElementById(id);
-    const moeda = valor => Number(valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-
-    function obterToken() { return localStorage.getItem('meu_token_jwt') || localStorage.getItem('token'); }
-
-    async function api(url, opcoes = {}) {
-        const token = obterToken();
-        if (!token) throw new Error('Faça login para acessar o sistema.');
-        const resposta = await fetch(url, {...opcoes, headers: {
-            'Content-Type':'application/json', 'Authorization':'Bearer ' + token, ...opcoes.headers
-        }});
-        if (!resposta.ok) {
-            if (resposta.status === 401 || resposta.status === 403) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('meu_token_jwt');
-                atualizarRodape();
-                throw new Error('Acesso negado ou sessão expirada. Faça login novamente.');
-            }
-            const texto = await resposta.text();
-            let mensagem = texto;
-            try {
-                const erro = JSON.parse(texto);
-                mensagem = erro.mensagem || erro.message || texto;
-                if (erro.erros) mensagem += ' ' + erro.erros.join('; ');
-            } catch (_) { /* A API anterior também devolvia texto simples. */ }
-            throw new Error(mensagem || 'Não foi possível concluir a operação.');
-        }
-        return resposta.status === 204 ? null : resposta.json();
-    }
-
-    function celula(linha, texto, classe) {
-        const td = document.createElement('td');
-        td.textContent = texto ?? 'Não registrado';
-        if (classe) td.className = classe;
-        linha.appendChild(td);
-        return td;
-    }
-    function mensagemTabela(id, texto, colunas) {
-        const corpo = el(id); corpo.replaceChildren();
-        const linha = document.createElement('tr');
-        celula(linha, texto).colSpan = colunas;
-        corpo.appendChild(linha);
-    }
-    function preencherSelect(id, dados, rotulo, primeiro) {
-        const select = el(id), selecionado = select.value;
-        select.replaceChildren(new Option(primeiro, ''));
-        dados.forEach(dado => select.add(new Option(rotulo(dado), dado.id)));
-        select.value = selecionado;
-        if (select.selectedIndex < 0) select.selectedIndex = 0;
-    }
-    function botao(texto, acao) {
-        const b = document.createElement('button');
-        b.textContent = texto; b.addEventListener('click', acao); return b;
-    }
-
-    async function carregarDados() {
-        try {
-            const [itens, resumo] = await Promise.all([api('/itens'), api('/itens/relatorio')]);
-            el('total-brindes').textContent = resumo.totalDeBrindesCadastrados;
-            el('valor-total').textContent = moeda(resumo.valorTotalArmazenado);
-            preencherSelect('mov-id-item', itens, i => `${i.codigo} - ${i.nome} (Estoque: ${i.quantidade})`, 'Selecione o Brinde...');
-            const corpo = el('tabela-itens'); corpo.replaceChildren();
-            itens.forEach(item => {
-                const linha = document.createElement('tr');
-                celula(linha, item.codigo); celula(linha, item.nome);
-                celula(linha, item.quantidade + ' un.', item.quantidade < 20 ? 'estoque-baixo' : '');
-                celula(linha, moeda(item.valor));
-                const acoes = celula(linha, '');
-                acoes.append(botao('Editar', () => editarValor(item.id, item.valor)), document.createTextNode(' '),
-                    botao('Remover', () => removerItem(item.id)));
-                corpo.appendChild(linha);
-            });
-            if (!itens.length) mensagemTabela('tabela-itens', 'Nenhum brinde cadastrado.', 5);
-        } catch (erro) {
-            mensagemTabela('tabela-itens', erro.message, 5);
-            el('total-brindes').textContent = '—'; el('valor-total').textContent = '—';
-        }
-    }
-    async function executarOperacao(acao) {
-        if (operacaoEmAndamento) return;
-        operacaoEmAndamento = true;
-        try { await acao(); await carregarDados(); }
-        catch (erro) { alert(erro.message); }
-        finally { operacaoEmAndamento = false; }
-    }
-    function cadastrarItem() {
-        const dados = {codigo:el('novo-codigo').value.trim(), nome:el('novo-nome').value.trim(),
-            quantidade:Number(el('novo-qtd').value), valor:Number(el('novo-valor').value)};
-        if (!dados.codigo || !dados.nome || el('novo-qtd').value === '' || el('novo-valor').value === ''
-            || !Number.isInteger(dados.quantidade) || dados.quantidade < 0 || !Number.isFinite(dados.valor) || dados.valor < 0) {
-            alert('Preencha código, nome, quantidade inteira não negativa e valor não negativo.'); return;
-        }
-        executarOperacao(async () => {
-            await api('/itens', {method:'POST', body:JSON.stringify(dados)});
-            ['novo-codigo','novo-nome','novo-qtd','novo-valor'].forEach(id => el(id).value = '');
-            alert('Produto cadastrado. O saldo inicial positivo foi registrado como ENTRADA.');
-        });
-    }
-    function registrarMovimentacao() {
-        const itemId = Number(el('mov-id-item').value), quantidade = Number(el('mov-qtd').value);
-        if (!itemId || !Number.isInteger(quantidade) || quantidade <= 0) {
-            alert('Selecione o item e informe uma quantidade inteira positiva.'); return;
-        }
-        executarOperacao(async () => {
-            await api('/movimentacoes', {method:'POST', body:JSON.stringify({item:{id:itemId},
-                tipo:el('mov-tipo').value, quantidade, observacao:el('mov-observacao').value.trim() || null})});
-            el('mov-qtd').value = ''; el('mov-observacao').value = '';
-            alert('Movimentação registrada com seu usuário autenticado.');
-        });
-    }
-    function removerItem(id) {
-        if (confirm('Excluir este item? Itens com histórico são preservados e não podem ser excluídos.')) {
-            executarOperacao(() => api(`/itens/${id}`, {method:'DELETE'}));
-        }
-    }
-    function editarValor(id, atual) {
-        const texto = prompt('Novo valor unitário:', atual);
-        if (texto === null) return;
-        const valor = Number(texto.trim().replace(',', '.'));
-        if (!texto.trim() || !Number.isFinite(valor) || valor < 0) { alert('Valor inválido.'); return; }
-        executarOperacao(() => api(`/itens/${id}`, {method:'PUT', body:JSON.stringify({valor})}));
-    }
-    function atualizarRodape() {
-        el('area-autenticacao').replaceChildren(obterToken()
-            ? botao('Desconectar (Sair)', fazerLogout)
-            : botao('Acesso Gerencial (Login)', () => window.location.href = '/login.html'));
-    }
-    function fazerLogout() {
-        localStorage.removeItem('token'); localStorage.removeItem('meu_token_jwt');
-        window.location.href = '/login.html';
-    }
-
-    async function abrirAba(aba) {
-        const relatorio = aba === 'relatorio';
-        el('painel-estoque').hidden = relatorio; el('painel-relatorio').hidden = !relatorio;
-        el('aba-estoque').setAttribute('aria-pressed', String(!relatorio));
-        el('aba-relatorio').setAttribute('aria-pressed', String(relatorio));
-        if (!relatorio) { carregarDados(); return; }
-        try {
-            const [itens, responsaveis] = await Promise.all([api('/itens'), api('/movimentacoes/responsaveis')]);
-            preencherSelect('filtro-item', itens, i => `${i.codigo} - ${i.nome}`, 'Todos');
-            preencherSelect('filtro-responsavel', responsaveis, u => u.login, 'Todos');
-            aplicarFiltros();
-        } catch (erro) {
-            ++consultaAtual;
-            mensagemTabela('tabela-movimentacoes', erro.message, 10);
-            el('status-relatorio').textContent = erro.message;
-            el('pagina-anterior').disabled = true; el('pagina-proxima').disabled = true;
-        }
-    }
-    function aplicarFiltros() {
-        const inicio = el('filtro-inicio').value, fim = el('filtro-fim').value;
-        if (inicio && fim && inicio > fim) {
-            el('status-relatorio').textContent = 'A data inicial não pode ser posterior à final.'; return;
-        }
-        filtrosAplicados = new URLSearchParams();
-        const campos = {dataInicial:inicio, dataFinal:fim, responsavelId:el('filtro-responsavel').value,
-            tipo:el('filtro-tipo').value, itemId:el('filtro-item').value};
-        Object.entries(campos).forEach(([chave, valor]) => { if (valor) filtrosAplicados.set(chave, valor); });
-        consultarRelatorio(0);
-    }
-    function limparFiltros() { el('form-filtros').reset(); aplicarFiltros(); }
-    async function consultarRelatorio(pagina) {
-        const consulta = ++consultaAtual;
-        el('status-relatorio').textContent = 'Carregando movimentações...';
-        el('pagina-anterior').disabled = true; el('pagina-proxima').disabled = true;
-        mensagemTabela('tabela-movimentacoes', 'Carregando...', 10);
-        const parametros = new URLSearchParams(filtrosAplicados);
-        parametros.set('pagina', pagina); parametros.set('tamanho', '20');
-        try {
-            const dados = await api('/movimentacoes/relatorio?' + parametros);
-            if (consulta !== consultaAtual) return; // Impede uma resposta antiga de sobrescrever filtros novos.
-            paginaRelatorio = dados.pagina;
-            const corpo = el('tabela-movimentacoes'); corpo.replaceChildren();
-            dados.conteudo.forEach(m => {
-                const linha = document.createElement('tr');
-                // LocalDateTime já representa horário de São Paulo; não converter pelo fuso do navegador.
-                const partes = m.dataMovimentacao ? m.dataMovimentacao.split('T') : [];
-                celula(linha, m.id);
-                celula(linha, partes[0] ? partes[0].split('-').reverse().join('/') : null);
-                celula(linha, partes[1] ? partes[1].substring(0,8) : null);
-                celula(linha, m.tipo === 'SAIDA' ? 'SAÍDA' : m.tipo, m.tipo === 'ENTRADA' ? 'tipo-entrada' : 'tipo-saida');
-                celula(linha, `${m.item.codigo} - ${m.item.nome}`);
-                celula(linha, m.quantidade);
-                celula(linha, m.responsavel ? m.responsavel.login : 'Responsável não registrado');
-                celula(linha, m.observacao || '—'); celula(linha, m.estoqueAnterior); celula(linha, m.estoquePosterior);
-                corpo.appendChild(linha);
-            });
-            if (!dados.conteudo.length) mensagemTabela('tabela-movimentacoes', 'Nenhuma movimentação encontrada.', 10);
-            el('status-relatorio').textContent = `${dados.totalElementos} movimentação(ões) encontrada(s).`;
-            el('pagina-info').textContent = dados.totalPaginas ? `Página ${dados.pagina + 1} de ${dados.totalPaginas}` : 'Sem resultados';
-            el('pagina-anterior').disabled = dados.pagina <= 0;
-            el('pagina-proxima').disabled = dados.pagina + 1 >= dados.totalPaginas;
-        } catch (erro) {
-            if (consulta !== consultaAtual) return;
-            el('status-relatorio').textContent = erro.message;
-            el('pagina-info').textContent = '';
-            mensagemTabela('tabela-movimentacoes', erro.message, 10);
-        }
-    }
-    el('form-filtros').addEventListener('submit', evento => { evento.preventDefault(); aplicarFiltros(); });
-    window.onload = () => { atualizarRodape(); carregarDados(); };
-</script>
+<dialog id="dialogo-cadastro" aria-labelledby="titulo-cadastro">
+<form id="form-cadastro">
+<div class="dialog-heading">
+<div>
+<p class="eyebrow">INVENTÁRIO</p>
+<h2 id="titulo-cadastro">Cadastrar novo brinde</h2>
+</div>
+<button type="button" class="icon-button" aria-label="Fechar cadastro" onclick="fecharDialogo('dialogo-cadastro')">×</button>
+</div>
+<p class="dialog-description">O saldo inicial positivo gera uma entrada no histórico.</p>
+<div class="form-grid">
+<label>Código<input id="novo-codigo" maxlength="50" required placeholder="Ex.: CAN-01">
+</label>
+<label>Nome do brinde<input id="novo-nome" maxlength="100" required placeholder="Ex.: Caneca térmica">
+</label>
+<label>Quantidade inicial<input id="novo-qtd" type="number" min="0" max="2147483647" step="1" value="0" required>
+</label>
+<label>Valor unitário (R$)<input id="novo-valor" type="number" min="0" max="999999999.99" step="0.01" required placeholder="0,00">
+</label>
+</div>
+<div class="dialog-actions">
+<button type="button" class="button-secondary" onclick="fecharDialogo('dialogo-cadastro')">Cancelar</button>
+<button type="submit" data-mutacao>Cadastrar brinde</button>
+</div>
+<p class="dialog-feedback" role="status">
+</p>
+</form>
+</dialog>
+<dialog id="dialogo-movimento" aria-labelledby="titulo-movimento">
+<form id="form-movimento">
+<div class="dialog-heading">
+<div>
+<p class="eyebrow">MOVIMENTAÇÃO</p>
+<h2 id="titulo-movimento">Registrar entrada ou saída</h2>
+</div>
+<button type="button" class="icon-button" aria-label="Fechar movimentação" onclick="fecharDialogo('dialogo-movimento')">×</button>
+</div>
+<p class="dialog-description">Seu usuário será registrado como responsável pela operação.</p>
+<div class="form-grid">
+<label class="full-width">Brinde<select id="mov-id-item" required>
+<option value="">Selecione o brinde...</option>
+</select>
+</label>
+<label>Tipo<select id="mov-tipo">
+<option value="ENTRADA">Entrada · adicionar</option>
+<option value="SAIDA">Saída · retirar</option>
+</select>
+</label>
+<label>Quantidade<input id="mov-qtd" type="number" min="1" max="2147483647" step="1" required>
+</label>
+<label class="full-width">Observação (opcional)<input id="mov-observacao" maxlength="500" placeholder="Ex.: Brindes para evento comercial">
+</label>
+</div>
+<div class="dialog-actions">
+<button type="button" class="button-secondary" onclick="fecharDialogo('dialogo-movimento')">Cancelar</button>
+<button type="submit" data-mutacao>Confirmar movimentação</button>
+</div>
+<p class="dialog-feedback" role="status">
+</p>
+</form>
+</dialog>
+<dialog id="dialogo-edicao" aria-labelledby="titulo-edicao">
+<form id="form-edicao">
+<div class="dialog-heading">
+<h2 id="titulo-edicao">Editar valor unitário</h2>
+<button type="button" class="icon-button" aria-label="Fechar edição" onclick="fecharDialogo('dialogo-edicao')">×</button>
+</div>
+<p id="nome-edicao" class="dialog-description">
+</p>
+<input id="edicao-id" type="hidden">
+<label>Novo valor (R$)<input id="edicao-valor" type="number" min="0" max="999999999.99" step="0.01" required>
+</label>
+<div class="dialog-actions">
+<button type="button" class="button-secondary" onclick="fecharDialogo('dialogo-edicao')">Cancelar</button>
+<button type="submit" data-mutacao>Salvar valor</button>
+</div>
+<p class="dialog-feedback" role="status">
+</p>
+</form>
+</dialog>
 </body>
 </html>

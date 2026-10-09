@@ -49,6 +49,10 @@ Content-Type: application/json
 
 {"item":{"id":{{itemId}}},"tipo":"ENTRADA","quantidade":10,"responsavelId":999}
 
-### Item com histórico: deve retornar 409 e preservar item e movimentos
+### Item com histórico: retorna 204, sai do inventário e preserva os movimentos
 DELETE {{baseUrl}}/itens/{{itemId}}
+Authorization: Bearer {{token}}
+
+### Produtos ativos e excluídos para consulta histórica
+GET {{baseUrl}}/itens/historico
 Authorization: Bearer {{token}}

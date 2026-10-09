@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+node_modules/
+.env
+.env.*
+!.env.example
+
+/config-local.properties
+/estoque-de-brindes-atualizacao/

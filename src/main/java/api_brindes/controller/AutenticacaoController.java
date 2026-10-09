@@ -51,7 +51,7 @@ public class AutenticacaoController {
          */
         var authenticationToken =
                 new UsernamePasswordAuthenticationToken(
-                        dados.login(),
+                        dados.login().trim(),
                         dados.senha()
                 );
 

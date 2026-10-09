@@ -12,17 +12,16 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class ItemService {
     private final ItemRepository itens;
-    private final MovimentacaoRepository movimentacoes;
     private final MovimentacaoService movimentacaoService;
 
-    public ItemService(ItemRepository itens, MovimentacaoRepository movimentacoes, MovimentacaoService movimentacaoService) {
+    public ItemService(ItemRepository itens, MovimentacaoService movimentacaoService) {
         this.itens = itens;
-        this.movimentacoes = movimentacoes;
         this.movimentacaoService = movimentacaoService;
     }
 
     @Transactional
     public Item cadastrar(CadastrarItemDTO dados) {
+        validarValor(dados.valor());
         // Nunca recebe ID nem altera saldo de item existente através do cadastro.
         Item item = itens.save(new Item(dados.codigo().trim(), dados.nome().trim(), 0, dados.valor()));
         if (dados.quantidade() > 0) {
@@ -36,19 +35,25 @@ public class ItemService {
     @Transactional
     public void apagar(Integer id) {
         var item = buscarComBloqueio(id);
-        if (movimentacoes.existsByItemId(id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Este item possui histórico e não pode ser excluído.");
-        }
-        itens.delete(item);
+        // Não zera o saldo nem cria uma saída fictícia. Apenas remove do inventário ativo.
+        item.setAtivo(false);
+        itens.save(item);
     }
 
     @Transactional
     public Item atualizarValor(Integer id, AtualizarValorDTO dados) {
+        validarValor(dados.valor());
         // Mesmo bloqueio da movimentação: evita sobrescrever um saldo concorrente.
         var item = buscarComBloqueio(id);
         item.setValor(dados.valor());
         return itens.save(item);
+    }
+
+    private void validarValor(Double valor) {
+        if (valor == null || !Double.isFinite(valor) || valor < 0 || valor > 999999999.99
+                || java.math.BigDecimal.valueOf(valor).stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("Informe um valor entre 0 e 999999999,99, com até duas casas decimais.");
+        }
     }
 
     private Item buscarComBloqueio(Integer id) {

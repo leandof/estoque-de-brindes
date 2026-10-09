@@ -1,28 +1,49 @@
-# Validação — Relatório de Movimentações
+# Validação desta revisão — 09/10/2026
 
-- Java 21: compilação e 16 testes concluídos, zero falhas/erros (15 novos testes de integração + 1 teste de contexto).
-- Interface: teste Playwright em Chromium headless aprovado (abas, filtros, vazio, limpar, datas inválidas, legado, texto seguro e largura de 390 px). API simulada nesse teste.
-- git diff --check: sem erros de whitespace.
-- O teste de período verifica inclusive 23:59:59 do último dia e exclusão do dia seguinte.
-- A suíte verifica identidade de João/Maria, saldos, data automática, tentativa de falsificação, preservação de histórico e duas saídas simultâneas.
-- Os testes de integração usam H2, não MySQL. Migração e bloqueios devem ser homologados numa cópia do MySQL antes da implantação.
-- Nenhuma conexão ao banco de produção, alteração remota no GitHub ou implantação foi realizada.
+## Executado
 
-Neste ambiente, o Mockito exigiu carregar previamente o agente Byte Buddy:
-`./mvnw -DargLine=-javaagent:/caminho/byte-buddy-agent-1.14.18.jar test`.
-Foi necessário apenas para a restrição de autoanexação da JVM do ambiente de execução.
-Em um JDK local normal, tente primeiro `./mvnw test`. A dependência do agente já vem pela infraestrutura de testes.
+- `node --check src/main/resources/static/js/index.js`: passou.
+- `node --check src/main/resources/static/js/login.js`: passou.
+- `node --check tests/ui-relatorio.cjs`: passou.
+- `node tests/logica-interface.cjs`: passou. Usa DOM mínimo e HTTP simulado. Cobre escape e neutralização de fórmulas no CSV, ausência de sessão, respostas 401/403, DELETE com retorno 204, confirmação da exclusão com saldo e invalidação da exportação em período incorreto.
+- Conferência de arquivos estáticos e identificadores referenciados pelo JS: passou.
+- `git diff --check`: conferido após a edição.
 
+## Bloqueado / não executado
+
+A tentativa inicial `bash mvnw -q -Djava.version=17 test` não chegou à compilação: o Maven não resolveu `repo.maven.apache.org` para baixar o parent do Spring Boot 3.3.2. A tentativa foi diagnóstica, pois o ambiente disponível só possui Java 17. O projeto e Dockerfile continuam usando Java 21.
+
+Não há resultado aprovado para os testes Java originais nem para os novos testes desta revisão. Execute `mvnw.cmd test` com JDK 21 no IntelliJ.
+
+Playwright está disponível, mas o download do Chromium falhou. O teste de navegador foi atualizado para carregar os novos arquivos estáticos e cobrir busca, abertura de formulário e download CSV; ele não foi executado aqui. Não foi feita inspeção visual renderizada em desktop/mobile.
+
+## Cenários Java incluídos
+
+A suíte existente continua cobrindo entradas, saídas, autor, datas, filtros, paginação, dados legados e concorrência. A expectativa antiga de conflito ao excluir foi substituída pelo comportamento solicitado de exclusão lógica. Foram adicionados cenários de logo pública, 401, soma acima de Integer.MAX_VALUE, preços inválidos, bloqueio de edição de item excluído e CORS preflight.
+
+## Roteiro manual de homologação
+
+1. Iniciar com JDK 21 e banco de desenvolvimento. Conferir logo no login e na tela principal.
+2. Testar senha incorreta, login correto e logout.
+3. Cadastrar um item com saldo inicial positivo; conferir entrada, responsável e saldo no relatório.
+4. Registrar entrada e saída; tentar saída superior ao disponível e quantidade fracionada.
+5. Editar o preço com duas casas; tentar preço negativo ou com três casas.
+6. Buscar item por código e nome; testar filtros de saldo baixo e zerado.
+7. Excluir item com movimentações e saldo. Conferir que deixa de aparecer no inventário e nos totais.
+8. Consultar seu histórico selecionando o produto marcado “excluído”. Conferir saldos anteriores preservados.
+9. Tentar uma movimentação via API para o ID excluído; esperar 404 sem alteração do histórico.
+10. Testar filtros combinados, período inválido, paginação e CSV da página exibida.
+11. Testar token vencido; esperar redirecionamento ao login.
+12. Conferir em desktop e celular, incluindo navegação por teclado e fechamento de diálogos com Escape.
+
+## Teste opcional em navegador
+
+Com Node instalado, na raiz do projeto:
 
 ```text
--------------------------------------------------------------------------------
-Test set: api_brindes.ApiBrindesApplicationTests
--------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.522 s -- in api_brindes.ApiBrindesApplicationTests
+npm install --no-save playwright
+npx playwright install chromium
+node tests/ui-relatorio.cjs
 ```
-```text
--------------------------------------------------------------------------------
-Test set: api_brindes.RelatorioMovimentacoesTests
--------------------------------------------------------------------------------
-Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 21.35 s -- in api_brindes.RelatorioMovimentacoesTests
-```
+
+Esse teste simula a API; não usa nem modifica o banco real. Screenshots vão para a pasta temporária do sistema, inclusive no Windows (variáveis `ESTOQUE_SCREENSHOT` e `RELATORIO_SCREENSHOT` para desktop).
